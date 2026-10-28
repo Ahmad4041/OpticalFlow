@@ -161,7 +161,16 @@ Acceptance:
 - [manual] The session-done notification shows both break buttons; picking one starts that break; "Break over" arrives at the end.
 UX: Breaks never block: no modal, only the menu bar label and a notification. The panel offers Break 5 / Break 15 when idle and End Break during a break.
 Status: done
-### S-015 Idle for 5 minutes asks keep or discard; auto-stop on sleep. Status: todo
+### S-015 Idle for 5 minutes asks keep or discard; auto-stop on sleep
+As the user, when I walk away for five minutes the session pauses itself and asks whether to keep or discard that time; when the Mac sleeps the session and recording stop.
+Screens: menubar
+Depends: S-006
+Acceptance:
+- [self] Five idle minutes pause the session; Keep adds the idle time and resumes; Discard resumes without it.
+- [manual] The "Away for 5 minutes" notification has Keep and Discard; the panel shows "Away since" with the same buttons.
+- [manual] Closing the lid stops the session and finalizes any recording.
+UX: Idle is measured from the last key or mouse event (CGEventSource, no permission). The pause never discards on its own: the user decides. Sleep stops, because a recording of a sleeping Mac is garbage.
+Status: done
 
 ## M4 Speed
 ### S-016 Global quick-entry panel (Control-Space) that captures the frontmost app name and URL into notes. Status: todo

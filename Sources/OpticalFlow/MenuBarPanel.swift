@@ -16,6 +16,16 @@ struct MenuBarPanel: View {
                 Text(model.menuLabel ?? "")
                     .font(.system(size: 44, weight: .medium, design: .rounded))
                     .monospacedDigit()
+                if let idleSince = model.idleSince {
+                    Text("Away since \(idleSince.formatted(date: .omitted, time: .shortened))")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: Space.sm) {
+                        Button("Keep Time") { model.keepIdleTime() }
+                        Button("Discard") { model.discardIdleTime() }
+                    }
+                    .controlSize(.small)
+                }
                 HStack(spacing: Space.sm) {
                     Button(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill") {
                         if model.paused { model.resume() } else { model.pause() }

@@ -1,3 +1,5 @@
+import AppKit
+import CoreGraphics
 import Foundation
 import SwiftData
 import OpticalFlowKit
@@ -33,6 +35,11 @@ final class AppModel {
     private var notifiedDone = false
     /// A break runs after a session: the menu bar counts it down.
     private(set) var breakUntil: Date?
+    /// Set when the session paused itself after five idle minutes; the user keeps or discards that time.
+    private(set) var idleSince: Date?
+    static let idleLimit: TimeInterval = 300
+    /// Tests only.
+    var idleOverride: TimeInterval?
     let recorder = Recorder()
 
     init(container: ModelContainer) {
@@ -47,6 +54,10 @@ final class AppModel {
         recorder.onStop = { [weak self] recording, duration in
             recording.duration = duration
             self?.save()
+        }
+        // A sleeping Mac never works; stop the session and any recording.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stopSession() }
         }
     }
 
@@ -226,8 +237,33 @@ final class AppModel {
         if !Store.isOverridden { Notifier.requestAuthorization() }
     }
 
+    /// Seconds since the last key or mouse event on this Mac.
+    private var idleSeconds: TimeInterval {
+        if let idleOverride { return idleOverride }
+        return [CGEventType.mouseMoved, .keyDown, .leftMouseDown, .scrollWheel]
+            .map { CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: $0) }
+            .min() ?? 0
+    }
+
+    /// Keep: the idle time counts as work. Discard: it does not. Both resume.
+    func keepIdleTime() {
+        if let idleSince, let session { session.seconds += Int(Date.now.timeIntervalSince(idleSince)) }
+        idleSince = nil
+        resume()
+    }
+
+    func discardIdleTime() {
+        idleSince = nil
+        resume()
+    }
+
     private func tick() {
         now = .now
+        if session != nil, !paused, idleSince == nil, idleSeconds >= Self.idleLimit {
+            idleSince = now.addingTimeInterval(-idleSeconds)
+            pause()
+            if !Store.isOverridden { Notifier.post("Away for 5 minutes", "Keep that time in the session, or discard it?", category: Notifier.idle) }
+        }
         if let session, !notifiedDone, elapsed >= session.plannedMinutes * 60 {
             notifiedDone = true
             if !Store.isOverridden { Notifier.post("Session done", session.task?.title ?? "", category: Notifier.sessionDone) }

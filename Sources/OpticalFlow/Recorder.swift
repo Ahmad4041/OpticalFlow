@@ -228,6 +228,9 @@ enum Notifier {
     static let sessionDone = "sessionDone"
     static let breakFive = "break5"
     static let breakFifteen = "break15"
+    static let idle = "idle"
+    static let keepIdle = "keepIdle"
+    static let discardIdle = "discardIdle"
 
     static func requestAuthorization() {
         let center = UNUserNotificationCenter.current()
@@ -235,6 +238,10 @@ enum Notifier {
             UNNotificationCategory(identifier: sessionDone, actions: [
                 UNNotificationAction(identifier: breakFive, title: "Break 5 min"),
                 UNNotificationAction(identifier: breakFifteen, title: "Break 15 min"),
+            ], intentIdentifiers: []),
+            UNNotificationCategory(identifier: idle, actions: [
+                UNNotificationAction(identifier: keepIdle, title: "Keep"),
+                UNNotificationAction(identifier: discardIdle, title: "Discard"),
             ], intentIdentifiers: []),
         ])
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }

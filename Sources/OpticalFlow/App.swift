@@ -120,6 +120,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             switch action {
             case Notifier.breakFive: model?.startBreak(minutes: 5)
             case Notifier.breakFifteen: model?.startBreak(minutes: 15)
+            case Notifier.keepIdle: model?.keepIdleTime()
+            case Notifier.discardIdle: model?.discardIdleTime()
             default: break
             }
         }
