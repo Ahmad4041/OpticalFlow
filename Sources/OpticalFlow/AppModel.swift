@@ -90,10 +90,12 @@ final class AppModel {
     @discardableResult
     func addTask(title: String, on page: Page? = nil) -> TaskItem? {
         guard let clean = TaskTitle.clean(title) else { return nil }
-        let task = TaskItem(title: clean)
+        let parsed = DueDateParser.parse(clean)
+        let task = TaskItem(title: parsed.title)
+        task.due = parsed.due
         switch page ?? sidebar ?? .list(.inbox) {
-        case .list(.today): task.due = .now
-        case .list(.upcoming): task.due = Calendar.current.date(byAdding: .day, value: 1, to: .now)
+        case .list(.today): task.due = task.due ?? .now
+        case .list(.upcoming): task.due = task.due ?? Calendar.current.date(byAdding: .day, value: 1, to: .now)
         case .list(.someday): task.isSomeday = true
         case .project(let id): task.project = project(id)
         default: break

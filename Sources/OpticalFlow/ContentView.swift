@@ -205,7 +205,7 @@ struct TaskList: View {
             if model.draftTitle != nil {
                 HStack(spacing: Space.sm) {
                     Image(systemName: "circle").foregroundStyle(.tertiary)
-                    TextField("New task", text: $draft)
+                    TextField("New task, then a date: tomorrow, fri, in 3 days, 5 nov", text: $draft)
                         .textFieldStyle(.plain)
                         .focused($draftFocused)
                         .onSubmit {

@@ -192,8 +192,22 @@ Acceptance:
 - [snap] A search field in the toolbar; the list is headed "Search" while a query is active; no-match shows the system "No Results" view.
 UX: Native `.searchable` in the toolbar, so Command-F and Escape behave like every Mac app. Results show the project dot.
 Status: done
-### S-018 Type-to-navigate the sidebar. Status: todo
-### S-019 Natural-language due dates ("tomorrow", "fri"). Status: todo
+### S-018 Type-to-navigate the sidebar
+As the user, I click the sidebar and type "up" to jump to Upcoming.
+Screens: inbox
+Acceptance:
+- [manual] With the sidebar focused, typing a page or project name selects it (the native List type-select).
+UX: Nothing custom: macOS lists already type-select. Documented here so the shortcut is known.
+Status: done
+### S-019 Natural-language due dates
+As the user, I end a new task with "tomorrow", "fri", "in 3 days", "next week", or "5 nov" and the date is set and cut from the title.
+Screens: inbox, quickentry
+Depends: S-001, S-016
+Acceptance:
+- [unit] DueDateParser: today, tomorrow, weekday names (next one, never today), in N days/weeks, next week, "5 nov" and "mar 1" (next year once passed); a lone date word stays a title; "in sunlight" is not a date.
+- [self] Adding "Call the sponsor tomorrow" on Inbox makes a task titled "Call the sponsor" due tomorrow; a plain title has no due.
+UX: Only at the end of the title, so "Fix the friday report" is left alone... except "friday" at the very end, which the user sees in the row and can clear with Shift-Command-T. The field placeholders name the forms.
+Status: done
 
 ## M5 System
 ### S-020 App Intents: start/stop session for Shortcuts and Apple Focus. Status: todo

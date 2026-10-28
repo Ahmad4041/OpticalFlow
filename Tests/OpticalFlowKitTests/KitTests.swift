@@ -63,3 +63,19 @@ func cleans(_ input: String, expected: String?) {
     #expect(DayGroup.label(for: day(2), now: now).hasPrefix("Saturday"))
     #expect(DayGroup.label(for: day(10), now: now).contains("2026"))
 }
+
+@Test func dueDates() {
+    let cal = Calendar.current
+    let now = cal.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: 12))!   // a Thursday
+    func day(_ n: Int) -> Date { cal.date(byAdding: .day, value: n, to: cal.startOfDay(for: now))! }
+    #expect(DueDateParser.parse("Fix login tomorrow", now: now) == .init(title: "Fix login", due: day(1)))
+    #expect(DueDateParser.parse("Call Anna fri", now: now) == .init(title: "Call Anna", due: day(1)))
+    #expect(DueDateParser.parse("Standup thursday", now: now) == .init(title: "Standup", due: day(7)))
+    #expect(DueDateParser.parse("Ship in 3 days", now: now) == .init(title: "Ship", due: day(3)))
+    #expect(DueDateParser.parse("Review next week", now: now) == .init(title: "Review", due: day(7)))
+    #expect(DueDateParser.parse("Pay rent 5 nov", now: now).due == cal.date(from: DateComponents(year: 2026, month: 11, day: 5)))
+    #expect(DueDateParser.parse("Taxes mar 1", now: now).due == cal.date(from: DateComponents(year: 2027, month: 3, day: 1)))
+    #expect(DueDateParser.parse("tomorrow", now: now) == .init(title: "tomorrow", due: nil))
+    #expect(DueDateParser.parse("Buy milk", now: now) == .init(title: "Buy milk", due: nil))
+    #expect(DueDateParser.parse("Read the book in sunlight", now: now).due == nil)
+}

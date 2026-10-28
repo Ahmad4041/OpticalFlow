@@ -101,7 +101,7 @@ struct QuickEntryView: View {
             HStack(spacing: Space.sm) {
                 Image(systemName: "tray")
                     .foregroundStyle(.secondary)
-                TextField("New task", text: $title)
+                TextField("New task, then a date: tomorrow, fri, in 3 days", text: $title)
                     .textFieldStyle(.plain)
                     .font(.title2)
                     .focused($focused)

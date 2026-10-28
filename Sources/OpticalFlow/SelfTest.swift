@@ -155,6 +155,19 @@ enum SelfTest {
         model.search = ""
         check("S-017 an empty search matches nothing", !model.matches(task))
 
+        // S-019
+        if let parsed = model.addTask(title: "Call the sponsor tomorrow", on: .list(.inbox)) {
+            check("S-019 a trailing date word sets due and is cut from the title",
+                  parsed.title == "Call the sponsor" && Calendar.current.isDateInTomorrow(parsed.due ?? .distantPast))
+            check("S-019 the task shows in Upcoming", model.tasks(for: .list(.upcoming)).contains(parsed))
+            context.delete(parsed)
+        }
+        if let plain = model.addTask(title: "Buy milk", on: .list(.inbox)) {
+            check("S-019 a plain title keeps no due", plain.due == nil)
+            context.delete(plain)
+        }
+        try? context.save()
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)
