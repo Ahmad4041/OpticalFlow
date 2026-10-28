@@ -10,7 +10,7 @@ final class Recorder {
     var micEnabled = UserDefaults.standard.object(forKey: "micEnabled") as? Bool ?? true {
         didSet { UserDefaults.standard.set(micEnabled, forKey: "micEnabled") }
     }
-    var cameraEnabled = UserDefaults.standard.bool(forKey: "cameraEnabled") {
+    var cameraEnabled = UserDefaults.standard.object(forKey: "cameraEnabled") as? Bool ?? true {
         didSet { UserDefaults.standard.set(cameraEnabled, forKey: "cameraEnabled") }
     }
     /// The row for the capture in progress. Set by onStart, cleared on stop.
@@ -23,6 +23,8 @@ final class Recorder {
 
     private var stream: SCStream?
     private var output: SCRecordingOutput?
+    /// Set before the first await in start: the picker can call back more than once.
+    private var starting = false
     private var startedAt: Date?
     private let observer = PickerObserver()
     private let streamDelegate = StreamDelegate()
@@ -31,6 +33,14 @@ final class Recorder {
     init() {
         observer.onPick = { [weak self] filter in Task { await self?.start(with: filter) } }
         streamDelegate.onStop = { [weak self] in Task { await self?.stop() } }
+        SCContentSharingPicker.shared.add(observer)   // once; adding per pick doubled the callbacks
+    }
+
+    /// Takes the start lock. False while a capture is starting or running.
+    func claimStart() -> Bool {
+        guard !isRecording, !starting else { return false }
+        starting = true
+        return true
     }
 
     /// ~/Movies/OpticalFlow, or /tmp when tests override the store.
@@ -41,19 +51,20 @@ final class Recorder {
     }
 
     func pick() {
-        guard !isRecording else { return }
+        guard !isRecording, !starting else { return }
+        lastError = nil
         var config = SCContentSharingPickerConfiguration()
         config.allowedPickerModes = [.singleDisplay, .singleWindow]
         config.allowsChangingSelectedContent = false
         let picker = SCContentSharingPicker.shared
         picker.defaultConfiguration = config
-        picker.add(observer)
         picker.isActive = true
         picker.present()
     }
 
     func start(with filter: SCContentFilter) async {
-        guard !isRecording else { return }
+        guard claimStart() else { return }
+        defer { starting = false }
         let config = SCStreamConfiguration()
         let scale = CGFloat(filter.pointPixelScale)
         var width = filter.contentRect.width * scale
@@ -67,6 +78,7 @@ final class Recorder {
         config.sampleRate = 48_000
         config.channelCount = 2
         config.captureMicrophone = micEnabled
+        config.queueDepth = 6
 
         try? FileManager.default.createDirectory(at: Self.directory, withIntermediateDirectories: true)
         let stamp = Date.now.formatted(Date.FormatStyle().year().month(.twoDigits).day(.twoDigits).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).second(.twoDigits))
@@ -75,10 +87,13 @@ final class Recorder {
         // The camera starts first: its permission prompt must not delay the screen capture.
         let cameraURL = Self.directory.appending(path: "\(stamp)-camera.mov")
         let cameraStarted = cameraEnabled ? await camera.start(to: cameraURL) : false
+        if cameraEnabled, !cameraStarted {
+            lastError = "No camera: allow OpticalFlow in System Settings > Privacy & Security > Camera."
+        }
         let outputConfig = SCRecordingOutputConfiguration()
         outputConfig.outputURL = url
         outputConfig.outputFileType = .mp4
-        outputConfig.videoCodecType = .hevc
+        outputConfig.videoCodecType = .h264   // hardware-encoded on Intel too, and what YouTube recommends
         let output = SCRecordingOutput(configuration: outputConfig, delegate: streamDelegate)
         let stream = SCStream(filter: filter, configuration: config, delegate: streamDelegate)
         do {
@@ -123,7 +138,7 @@ final class CameraRecorder {
               let device = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: device) else { return false }
         session.beginConfiguration()
-        session.sessionPreset = .high
+        session.sessionPreset = .hd1280x720   // ponytail: 720p keeps an Intel Mac smooth beside the screen capture
         if session.canAddInput(input) { session.addInput(input) }
         if session.outputs.isEmpty, session.canAddOutput(output) { session.addOutput(output) }
         session.commitConfiguration()

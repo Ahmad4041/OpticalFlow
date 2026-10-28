@@ -37,7 +37,9 @@ struct MenuBarPanel: View {
                 get: { model.recorder.isRecording },
                 set: { _ in model.toggleRecording() }))
             Toggle("Microphone", systemImage: "mic", isOn: $recorder.micEnabled)
+                .disabled(model.recorder.isRecording)
             Toggle("Camera", systemImage: "web.camera", isOn: $recorder.cameraEnabled)
+                .disabled(model.recorder.isRecording)
             if let error = model.recorder.lastError {
                 Text(error).font(.caption).foregroundStyle(.secondary)
             }

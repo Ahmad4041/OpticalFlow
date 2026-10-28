@@ -82,7 +82,7 @@ Acceptance:
 - [self] Stopping the session stops the recording. Quitting the app stops and finalizes the file.
 - [manual] A 2-minute recording with mic on opens in QuickTime with audio (checks the corruption report).
 - [snap] Recordings page lists recordings with task title, date, duration, and a "Show in Finder" button.
-UX: Red dot in the toolbar and the menu bar label while recording ("● 24:10"). Mic on by default, toggle in the popover. Camera sidecar is S-011.
+UX: Red dot in the toolbar and the menu bar label while recording ("● 24:10"). Mic and camera on by default; toggles in the toolbar's Recording Options menu, the menu bar panel, and Settings, all disabled while recording. Camera sidecar is S-011.
 Status: doing (built; the [manual] QuickTime check of a real capture is still open)
 
 ### S-008 Export a chapter list from completed tasks

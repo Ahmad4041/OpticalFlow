@@ -124,6 +124,10 @@ enum SelfTest {
         recording.copyChapters()
         check("S-008 Copy puts the list on the pasteboard", NSPasteboard.general.string(forType: .string) == recording.chapterText)
 
+        // S-007 fix: the picker may call back twice; only one capture may start.
+        check("S-007 the first start claims the lock", model.recorder.claimStart())
+        check("S-007 a second start while starting is refused", !model.recorder.claimStart())
+
         // S-009
         let source = Recorder.directory.appending(path: "selftest-source.mp4")
         do {

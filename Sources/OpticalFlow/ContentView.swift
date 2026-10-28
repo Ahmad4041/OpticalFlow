@@ -70,7 +70,25 @@ struct ContentView: View {
             }
             .tint(model.recorder.isRecording ? .red : nil)
             .help(model.recorder.isRecording ? "Stop recording" : "Record the screen (Shift-Command-R)")
+            RecordingOptionsMenu()
         }
+    }
+}
+
+/// Microphone and camera, set before a recording starts.
+struct RecordingOptionsMenu: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var recorder = model.recorder
+        Menu {
+            Toggle("Microphone", systemImage: "mic", isOn: $recorder.micEnabled)
+            Toggle("Camera", systemImage: "web.camera", isOn: $recorder.cameraEnabled)
+        } label: {
+            Label("Recording Options", systemImage: "slider.horizontal.3")
+        }
+        .disabled(model.recorder.isRecording)
+        .help("Microphone and camera for the next recording")
     }
 }
 
