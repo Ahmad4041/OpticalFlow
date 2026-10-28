@@ -124,7 +124,9 @@ enum SelfTest {
         recording.copyChapters()
         check("S-008 Copy puts the list on the pasteboard", NSPasteboard.general.string(forType: .string) == recording.chapterText)
 
-        // S-007 fix: the picker may call back twice; only one capture may start.
+        // S-007 fix: mic and camera default on; the picker may call back twice; only one capture may start.
+        check("S-007 microphone and camera are on by default", model.recorder.micEnabled && model.recorder.cameraEnabled,
+              "mic \(model.recorder.micEnabled) camera \(model.recorder.cameraEnabled)")
         check("S-007 the first start claims the lock", model.recorder.claimStart())
         check("S-007 a second start while starting is refused", !model.recorder.claimStart())
 
