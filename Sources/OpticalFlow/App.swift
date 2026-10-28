@@ -26,7 +26,8 @@ struct OpticalFlowApp: App {
                 .frame(minWidth: 860, minHeight: 520)
                 .onAppear {
                     delegate.model = model
-                    Hotkey.register { model.toggleSession() }
+                    Hotkey.registerSession { model.toggleSession() }
+                    Hotkey.registerQuickEntry { model.quickEntry.toggle() }
                 }
         }
         .modelContainer(model.container)
@@ -40,6 +41,8 @@ struct OpticalFlowApp: App {
                     .keyboardShortcut("n")
                 Button("New Project…") { model.projectPrompt = .new }
                     .keyboardShortcut("n", modifiers: [.command, .shift])
+                Button("Quick Entry") { model.quickEntry.toggle() }
+                    .keyboardShortcut(.space, modifiers: .control)
             }
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo") {

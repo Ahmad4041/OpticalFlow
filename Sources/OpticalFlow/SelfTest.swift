@@ -138,6 +138,13 @@ enum SelfTest {
         check("S-015 Discard resumes without the idle time", !model.paused && model.session?.seconds == beforeDiscard)
         model.stopSession()
 
+        // S-016
+        let fromXcode = FrontmostContext(appName: "Xcode", url: nil)
+        check("S-016 the frontmost app goes into the notes", fromXcode.notes == "From Xcode")
+        let fromSafari = FrontmostContext(appName: "Safari", url: "https://example.com")
+        check("S-016 a browser URL goes into the notes", fromSafari.notes == "From Safari: https://example.com")
+        check("S-016 OpticalFlow itself adds nothing", FrontmostContext(appName: "").notes.isEmpty)
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)

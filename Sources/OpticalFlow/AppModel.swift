@@ -41,6 +41,13 @@ final class AppModel {
     /// Tests only.
     var idleOverride: TimeInterval?
     let recorder = Recorder()
+    @ObservationIgnored private var _quickEntry: QuickEntry?
+    var quickEntry: QuickEntry {
+        if let _quickEntry { return _quickEntry }
+        let entry = QuickEntry(model: self)
+        _quickEntry = entry
+        return entry
+    }
 
     init(container: ModelContainer) {
         self.container = container

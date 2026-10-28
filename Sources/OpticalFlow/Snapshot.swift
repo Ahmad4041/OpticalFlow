@@ -40,6 +40,17 @@ enum Snapshot {
                     capture(to: "\(dir)/\(page.snapshotName)-\(mode).png")
                 }
             }
+            if only == nil || only?.contains("quickentry") == true {
+                model.quickEntry.show()
+                try? await Task.sleep(for: .seconds(0.8))
+                let panel = NSApp.windows.first { $0 is NSPanel && $0.isVisible && $0.level == .floating }
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.4))
+                    capture(to: "\(dir)/quickentry-\(mode).png", window: panel)
+                }
+                model.quickEntry.close()
+            }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
                 openSettings()

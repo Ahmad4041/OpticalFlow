@@ -62,6 +62,7 @@ struct GeneralSettings: View {
         Section("Sessions") {
             Stepper("Length: \(plannedMinutes) minutes", value: $plannedMinutes, in: 5...180, step: 5)
             LabeledContent("Start or stop anywhere", value: "⌃⌥⌘S")
+            LabeledContent("Quick entry anywhere", value: "⌃Space")
         }
         Section("Recording") {
             Toggle("Microphone on", isOn: $recorder.micEnabled)

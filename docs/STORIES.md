@@ -173,7 +173,16 @@ UX: Idle is measured from the last key or mouse event (CGEventSource, no permiss
 Status: done
 
 ## M4 Speed
-### S-016 Global quick-entry panel (Control-Space) that captures the frontmost app name and URL into notes. Status: todo
+### S-016 Global quick-entry panel
+As the user, I press Control-Space in any app, type a task, and press Return to save it to Inbox with the frontmost app (and browser URL) in its notes.
+Screens: quickentry
+Depends: S-001
+Acceptance:
+- [snap] A floating panel with one large field, the "From <app>" line, and the Return/Escape hint.
+- [self] Notes read "From Xcode", or "From Safari: <url>"; nothing when OpticalFlow was in front.
+- [manual] Control-Space works while another app is frontmost (Carbon hotkey, no permission); Escape or a click elsewhere closes it; the task appears in Inbox.
+UX: One field, no project or date here: speed over options. The panel sits a little above center. Also in File > Quick Entry. The browser URL needs the Automation prompt once per browser.
+Status: done
 ### S-017 Search (Command-F) across tasks. Status: todo
 ### S-018 Type-to-navigate the sidebar. Status: todo
 ### S-019 Natural-language due dates ("tomorrow", "fri"). Status: todo
