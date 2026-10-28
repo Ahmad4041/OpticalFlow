@@ -152,7 +152,15 @@ Acceptance:
 - [unit] DayGroup.label gives Today, Tomorrow, "Saturday 31 Oct", "8 Nov 2026".
 UX: Native List sections, no custom headers. Adding a task on Upcoming puts it under Tomorrow.
 Status: done
-### S-014 Session end reminder picks a break length (5 / 15). Status: todo
+### S-014 Session end reminder picks a break length
+As the user, when a session reaches its planned length the notification offers "Break 5 min" and "Break 15 min", and the menu bar counts the break down.
+Screens: menubar
+Depends: S-005
+Acceptance:
+- [self] Starting a break stops any session and the menu bar shows "☕ 05:00"; starting a session ends a break; End Break clears the label.
+- [manual] The session-done notification shows both break buttons; picking one starts that break; "Break over" arrives at the end.
+UX: Breaks never block: no modal, only the menu bar label and a notification. The panel offers Break 5 / Break 15 when idle and End Break during a break.
+Status: done
 ### S-015 Idle for 5 minutes asks keep or discard; auto-stop on sleep. Status: todo
 
 ## M4 Speed

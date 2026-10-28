@@ -31,6 +31,8 @@ final class AppModel {
     private var now = Date.now
     private var ticker: Task<Void, Never>?
     private var notifiedDone = false
+    /// A break runs after a session: the menu bar counts it down.
+    private(set) var breakUntil: Date?
     let recorder = Recorder()
 
     init(container: ModelContainer) {
@@ -172,9 +174,40 @@ final class AppModel {
         return session.seconds + Int(live)
     }
 
-    /// The menu bar text. nil when no session runs.
+    /// The menu bar text. nil when nothing runs.
     var menuLabel: String? {
-        session.map { Countdown.label(planned: $0.plannedMinutes * 60, elapsed: elapsed, paused: paused, recording: recorder.isRecording) }
+        if let session {
+            return Countdown.label(planned: session.plannedMinutes * 60, elapsed: elapsed, paused: paused, recording: recorder.isRecording)
+        }
+        if let breakUntil {
+            return "☕ " + Countdown.clock(breakRemaining)
+        }
+        return nil
+    }
+
+    var breakRemaining: Int { breakUntil.map { max(0, Int(ceil($0.timeIntervalSince(now)))) } ?? 0 }
+
+    /// Stops the session if one runs, then counts down a break.
+    func startBreak(minutes: Int) {
+        stopSession()
+        breakUntil = Date.now.addingTimeInterval(Double(minutes) * 60)
+        now = .now
+        runTicker()
+    }
+
+    func endBreak() {
+        breakUntil = nil
+        if session == nil { ticker?.cancel(); ticker = nil }
+    }
+
+    private func runTicker() {
+        guard ticker == nil else { return }
+        ticker = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                self?.tick()
+            }
+        }
     }
 
     func startSession(on task: TaskItem? = nil) {
@@ -188,12 +221,8 @@ final class AppModel {
         notifiedDone = false
         resumedAt = .now
         now = .now
-        ticker = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                self?.tick()
-            }
-        }
+        breakUntil = nil
+        runTicker()
         if !Store.isOverridden { Notifier.requestAuthorization() }
     }
 
@@ -201,7 +230,11 @@ final class AppModel {
         now = .now
         if let session, !notifiedDone, elapsed >= session.plannedMinutes * 60 {
             notifiedDone = true
-            if !Store.isOverridden { Notifier.post("Session done", session.task?.title ?? "") }
+            if !Store.isOverridden { Notifier.post("Session done", session.task?.title ?? "", category: Notifier.sessionDone) }
+        }
+        if let breakUntil, breakUntil <= now {
+            endBreak()
+            if !Store.isOverridden { Notifier.post("Break over", "Pick the next task.") }
         }
     }
 
@@ -231,8 +264,7 @@ final class AppModel {
         save()
         self.session = nil
         paused = false
-        ticker?.cancel()
-        ticker = nil
+        if breakUntil == nil { ticker?.cancel(); ticker = nil }
         if recorder.isRecording { Task { await recorder.stop() } }
     }
 

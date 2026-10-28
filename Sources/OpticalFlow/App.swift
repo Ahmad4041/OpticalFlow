@@ -1,6 +1,7 @@
 import AppKit
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 // OpticalFlow
 //   OpticalFlow                      the app
@@ -102,13 +103,30 @@ struct OpticalFlowApp: App {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var model: AppModel?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Started from a terminal, the process is not a foreground app yet.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
+        if !Store.isOverridden { UNUserNotificationCenter.current().delegate = self }
+    }
+
+    /// "Break 5 min" / "Break 15 min" on the session-done notification.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        let action = response.actionIdentifier
+        await MainActor.run {
+            switch action {
+            case Notifier.breakFive: model?.startBreak(minutes: 5)
+            case Notifier.breakFifteen: model?.startBreak(minutes: 15)
+            default: break
+            }
+        }
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

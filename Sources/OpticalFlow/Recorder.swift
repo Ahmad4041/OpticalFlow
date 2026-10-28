@@ -225,15 +225,27 @@ final class StreamDelegate: NSObject, SCStreamDelegate, SCRecordingOutputDelegat
 
 /// Session-end notifications. Needs the signed .app bundle, so test runs skip it.
 enum Notifier {
+    static let sessionDone = "sessionDone"
+    static let breakFive = "break5"
+    static let breakFifteen = "break15"
+
     static func requestAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        let center = UNUserNotificationCenter.current()
+        center.setNotificationCategories([
+            UNNotificationCategory(identifier: sessionDone, actions: [
+                UNNotificationAction(identifier: breakFive, title: "Break 5 min"),
+                UNNotificationAction(identifier: breakFifteen, title: "Break 15 min"),
+            ], intentIdentifiers: []),
+        ])
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    static func post(_ title: String, _ body: String) {
+    static func post(_ title: String, _ body: String, category: String? = nil) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        if let category { content.categoryIdentifier = category }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 }

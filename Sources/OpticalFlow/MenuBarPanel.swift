@@ -23,6 +23,12 @@ struct MenuBarPanel: View {
                     Button("Stop", systemImage: "stop.fill") { model.stopSession() }
                         .buttonStyle(.borderedProminent)
                 }
+            } else if model.breakUntil != nil {
+                Text("Break").font(.headline)
+                Text(Countdown.clock(model.breakRemaining))
+                    .font(.system(size: 44, weight: .medium, design: .rounded))
+                    .monospacedDigit()
+                Button("End Break", systemImage: "stop.fill") { model.endBreak() }
             } else {
                 Text(model.selectedTask?.title ?? "Select a task to start a session")
                     .font(.headline)
@@ -31,6 +37,11 @@ struct MenuBarPanel: View {
                 Button("Start Session", systemImage: "play.fill") { model.startSession() }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.selectedTask == nil)
+                HStack(spacing: Space.sm) {
+                    Button("Break 5") { model.startBreak(minutes: 5) }
+                    Button("Break 15") { model.startBreak(minutes: 15) }
+                }
+                .controlSize(.small)
             }
             Divider()
             Toggle("Record screen", systemImage: "record.circle", isOn: Binding(

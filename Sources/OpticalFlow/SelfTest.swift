@@ -111,6 +111,16 @@ enum SelfTest {
         check("S-006 the hotkey with a session stops it", model.session == nil)
         check("S-006 Sessions page lists every session", sessionCount() == 3, "\(sessionCount())")
 
+        // S-014
+        model.startBreak(minutes: 5)
+        check("S-014 Break 5 counts down in the menu bar", model.session == nil && model.menuLabel == "☕ 05:00", model.menuLabel ?? "nil")
+        model.startSession(on: task)
+        check("S-014 starting a session ends the break", model.breakUntil == nil && model.session != nil)
+        model.startBreak(minutes: 15)
+        check("S-014 a break from a running session stops it first", model.session == nil && model.breakRemaining == 900)
+        model.endBreak()
+        check("S-014 End Break clears the label", model.menuLabel == nil)
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)
