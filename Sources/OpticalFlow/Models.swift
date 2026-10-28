@@ -404,12 +404,15 @@ final class AppModel {
 
     // MARK: Export
 
-    /// Writes "<name>-<start>-<end>.mp4" next to the recording and returns its row, chapters shifted.
-    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval) async throws -> Recording {
+    /// Writes "<name> <start> to <end>[ with camera].mp4" next to the recording and returns its row, chapters shifted.
+    /// With the camera, the sidecar is laid over the bottom-right corner and the file is re-encoded.
+    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval, withCamera: Bool = false) async throws -> Recording {
         let stem = recording.url.deletingPathExtension().lastPathComponent
-        let suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
+        let camera = withCamera && recording.hasCamera ? recording.cameraURL : nil
+        var suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
+        if camera != nil { suffix += " with camera" }
         let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(suffix).mp4")
-        try await Exporter.export(screen: recording.url, start: start, end: end, to: output)
+        try await Exporter.export(screen: recording.url, camera: camera, start: start, end: end, to: output)
         let new = Recording(url: output, session: recording.session)
         new.startedAt = recording.startedAt.addingTimeInterval(start)
         new.duration = end - start

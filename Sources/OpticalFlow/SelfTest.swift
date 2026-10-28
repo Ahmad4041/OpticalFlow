@@ -138,8 +138,19 @@ enum SelfTest {
             check("S-009 Export Trimmed writes the chosen range", abs(seconds - 2) < 0.3, "\(seconds)")
             check("S-009 chapters shift by the trimmed start", trimmed.chapters == [ChapterMark(title: "Kept", offset: 1)])
             check("S-009 the trimmed file sits next to the original", trimmed.url.deletingLastPathComponent() == source.deletingLastPathComponent() && trimmed.fileExists)
+            // S-012
+            let cameraSource = Recorder.directory.appending(path: "selftest-camera.mov")
+            try await TestVideo.make(at: cameraSource, seconds: 4, width: 160, height: 120)
+            original.cameraPath = cameraSource.path
+            let composite = try await model.trim(original, start: 1, end: 3, withCamera: true)
+            let asset = AVURLAsset(url: composite.url)
+            let compositeSeconds = try await asset.load(.duration).seconds
+            let size = try await asset.loadTracks(withMediaType: .video).first?.load(.naturalSize) ?? .zero
+            check("S-012 the composite keeps the screen size and range", abs(compositeSeconds - 2) < 0.3 && size == CGSize(width: 320, height: 240), "\(compositeSeconds) \(size)")
+            check("S-012 the composite is named with camera", composite.url.lastPathComponent.hasSuffix("with camera.mp4"))
+            check("S-012 the composite has one video track", try await asset.loadTracks(withMediaType: .video).count == 1)
         } catch {
-            check("S-009 Export Trimmed", false, "\(error)")
+            check("S-009/S-012 export", false, "\(error)")
         }
     }
 

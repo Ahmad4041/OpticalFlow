@@ -52,6 +52,7 @@ struct RecordingDetail: View {
     @State private var start: Double = 0
     @State private var end: Double = 0
     @State private var exporting = false
+    @State private var withCamera = true
     @State private var exportError: String?
 
     var body: some View {
@@ -78,6 +79,10 @@ struct RecordingDetail: View {
                 LabeledContent("End") {
                     Slider(value: $end, in: 0...max(1, recording.duration))
                     Text(Countdown.clock(Int(end), padded: false)).monospacedDigit().frame(width: 64, alignment: .trailing)
+                }
+                if recording.cameraURL != nil {
+                    Toggle("Include the camera in the corner", isOn: $withCamera)
+                        .disabled(!recording.hasCamera)
                 }
                 HStack {
                     Button("Export Trimmed", systemImage: "scissors") { export() }
@@ -109,7 +114,7 @@ struct RecordingDetail: View {
         Task {
             defer { exporting = false }
             do {
-                let new = try await model.trim(recording, start: start, end: end)
+                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera)
                 model.selection = new.id
             } catch {
                 exportError = error.localizedDescription

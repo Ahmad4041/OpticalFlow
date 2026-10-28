@@ -132,8 +132,15 @@ UX: "Camera" toggle under "Microphone" in the menu bar panel and in Settings > R
 Status: done
 
 ### S-012 Composite camera bubble into the export
+As the user, I export a recording with the camera laid over the bottom-right corner.
+Screens: recording-detail
 Depends: S-011, S-009
-Status: todo
+Acceptance:
+- [self] The export has one video track, the screen's size, and the chosen range; the file name ends in "with camera".
+- [snap] The Trim section shows "Include the camera in the corner" when the recording has a sidecar.
+- [manual] The camera sits bottom-right at a quarter of the width with a small margin.
+UX: One toggle in the Trim section, on by default, disabled when the sidecar file is missing. A rectangle for now; a round bubble and position choice are later polish.
+Status: done
 
 ## M3 Time
 ### S-013 Upcoming grouped by day. Status: todo
