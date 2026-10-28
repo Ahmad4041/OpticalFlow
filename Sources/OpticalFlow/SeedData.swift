@@ -1,11 +1,9 @@
 import Foundation
 import SwiftData
+import OpticalFlowKit
 
-/// Sample data for snapshots: APP_SEED=1 with APP_STORE in /tmp fills an empty
-/// store with realistic items (short and long titles, starred and not).
-/// Replace these with your app's own types. Seed only what a person can
-/// create in the app, or the snapshots show features no one can use.
-@MainActor
+/// Sample data for snapshots: APP_SEED=1 with APP_STORE in /tmp fills an empty store.
+/// Only what a person can create in the app.
 enum SeedData {
     static func insertIfRequested(into model: AppModel) {
         guard ProcessInfo.processInfo.environment["APP_SEED"] == "1" else { return }
@@ -13,24 +11,61 @@ enum SeedData {
             print("APP_SEED ignored: APP_STORE must be a file in /tmp")
             return
         }
-        let context = model.container.mainContext
-        guard ((try? context.fetchCount(FetchDescriptor<Item>())) ?? 0) == 0 else { return }
-        let samples: [(String, Bool)] = [
-            ("Book the dentist", false),
-            ("Read the article about local-first software and write down three ideas worth trying", true),
-            ("Renew passport", false),
-            ("Plan the weekend trip", true),
-            ("Call Anna", false),
-            ("Back up the photo library to the external drive before the trip", false),
-            ("Groceries", false),
-            ("Draft the quarterly review", true),
-        ]
-        for (index, sample) in samples.enumerated() {
-            let item = Item(title: sample.0)
-            item.isStarred = sample.1
-            item.createdAt = Date.now.addingTimeInterval(Double(-index) * 3_600)
+        let context = model.context
+        guard ((try? context.fetchCount(FetchDescriptor<TaskItem>())) ?? 0) == 0 else { return }
+        let calendar = Calendar.current
+        func day(_ offset: Int) -> Date { calendar.date(byAdding: .day, value: offset, to: .now)! }
+
+        let app = Project(name: "OpticalFlow", color: .blue)
+        let stream = Project(name: "Stream setup", color: .purple)
+        context.insert(app)
+        context.insert(stream)
+
+        @discardableResult
+        func task(_ title: String, project: Project? = nil, due: Date? = nil, someday: Bool = false,
+                  done: Bool = false, notes: String = "", age: Int) -> TaskItem {
+            let item = TaskItem(title: title)
+            item.project = project
+            item.due = due
+            item.isSomeday = someday
+            item.notes = notes
+            item.createdAt = Date.now.addingTimeInterval(Double(-age) * 3_600)
+            if done { item.completedAt = Date.now.addingTimeInterval(-3_600) }
             context.insert(item)
+            return item
         }
+        task("Reply to the sponsor email", age: 9)
+        task("Order a second SSD for recordings", notes: "2 TB, NVMe, for the Thunderbolt dock.", age: 8)
+        let login = task("Fix the login redirect loop", project: app, due: .now,
+                         notes: "Repro: sign out, open /settings, sign in. Lands on / instead of /settings.", age: 7)
+        task("Write the chapter export", project: app, due: day(-1), age: 6)
+        let walkthrough = task("Record the SwiftData walkthrough", project: stream, due: .now, done: true, age: 5)
+        task("Set up the OBS scene for the Mac stream", project: stream, due: day(2), age: 4)
+        task("Try the new ScreenCaptureKit picker API", project: app, due: day(5), age: 3)
+        task("Learn Metal shaders for the intro animation", someday: true, age: 2)
+        task("Build a Stream Deck plugin", project: stream, someday: true, age: 1)
+
+        let first = Session(task: login, plannedMinutes: 25)
+        first.startedAt = Date.now.addingTimeInterval(-3 * 3_600)
+        first.endedAt = first.startedAt.addingTimeInterval(1_680)
+        first.seconds = 1_620
+        context.insert(first)
+
+        let second = Session(task: walkthrough, plannedMinutes: 25)
+        second.startedAt = day(-1).addingTimeInterval(-2 * 3_600)
+        second.endedAt = second.startedAt.addingTimeInterval(1_750)
+        second.seconds = 1_710
+        context.insert(second)
+
+        let recording = Recording(url: Recorder.directory.appending(path: "2026-10-28 14.02.11.mp4"), session: second)
+        recording.startedAt = second.startedAt
+        recording.duration = 1_710
+        recording.chapters = [
+            ChapterMark(title: "Add the model", offset: 312),
+            ChapterMark(title: "Query in the list", offset: 905),
+            ChapterMark(title: "Wrap up", offset: 1_600),
+        ]
+        context.insert(recording)
         try? context.save()
     }
 }

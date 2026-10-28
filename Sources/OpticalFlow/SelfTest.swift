@@ -5,8 +5,7 @@ import OpticalFlowKit
 /// Self-test for agents: runs the app's real functions on a test store,
 /// prints PASS or FAIL per check, and quits with exit code 0 or 1.
 ///   APP_STORE=/tmp/OpticalFlow-self.store ~/Applications/OpticalFlow.app/Contents/MacOS/OpticalFlow --selftest
-/// (tools/selftest.sh does this.) Add a check for every story with logic.
-@MainActor
+/// (tools/selftest.sh does this.) One check per acceptance line that has logic.
 enum SelfTest {
     static var requested: Bool { CommandLine.arguments.contains("--selftest") }
     /// Read by AppDelegate.applicationWillTerminate.
@@ -16,7 +15,6 @@ enum SelfTest {
 
     static func runIfRequested(model: AppModel) {
         guard requested else { return }
-        // Print each line at once, so a crash keeps the lines before it.
         setvbuf(stdout, nil, _IOLBF, 0)
         guard Store.isOverridden else {
             print("SELFTEST refused: set APP_STORE to a file in /tmp")
@@ -25,26 +23,105 @@ enum SelfTest {
         }
         Task {
             try? await Task.sleep(for: .seconds(0.5))
-            let context = model.container.mainContext
-            func items() -> [Item] { (try? context.fetch(FetchDescriptor<Item>())) ?? [] }
-
-            let before = items().count
-            model.addItem()
-            check("New Item adds one item", items().count == before + 1)
-            check("the new item is selected", model.selection != nil)
-
-            if let item = items().first(where: { $0.id == model.selection }) {
-                item.isStarred.toggle()
-                check("starring an item marks it starred", item.isStarred)
-                context.delete(item)
-                try? context.save()
-                check("deleting the item removes it", items().count == before)
-            }
-            check("titles are cleaned", ItemTitle.clean("  Buy   milk ") == "Buy milk")
-
+            run(model: model)
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)
         }
+    }
+
+    private static func run(model: AppModel) {
+        let context = model.context
+        func taskCount() -> Int { (try? context.fetchCount(FetchDescriptor<TaskItem>())) ?? -1 }
+        func sessionCount() -> Int { (try? context.fetchCount(FetchDescriptor<Session>())) ?? -1 }
+
+        // S-001
+        let before = taskCount()
+        model.sidebar = .list(.inbox)
+        guard let task = model.addTask(title: "  Write   tests ") else { return check("S-001 Return adds a task", false) }
+        check("S-001 Return adds a task", taskCount() == before + 1)
+        check("S-001 the title is cleaned", task.title == "Write tests")
+        check("S-001 an Inbox task has no project and no due", task.project == nil && task.due == nil)
+        check("S-001 an empty title is rejected", model.addTask(title: "   ") == nil && taskCount() == before + 1)
+        guard let today = model.addTask(title: "Due today", on: .list(.today)) else { return check("S-001 Today add", false) }
+        check("S-001 a Today task is due today", Calendar.current.isDateInToday(today.due ?? .distantPast))
+        guard let someday = model.addTask(title: "Later", on: .list(.someday)) else { return check("S-001 Someday add", false) }
+        check("S-001 a Someday task is flagged", someday.isSomeday)
+        try? context.save()
+        let reopened = (try? ModelContext(model.container).fetchCount(FetchDescriptor<TaskItem>())) ?? -1
+        check("S-001 tasks survive a reopen", reopened == before + 3, "\(reopened) vs \(before + 3)")
+
+        // S-002
+        model.selection = task.id
+        model.completeSelected()
+        let completedAt = task.completedAt
+        check("S-002 Command-K completes the selected task", completedAt != nil)
+        model.complete(task)
+        check("S-002 completing again is a no-op", task.completedAt == completedAt)
+        check("S-002 a fresh done task still shows in its list", model.tasks(for: .list(.inbox)).contains(task))
+        check("S-002 Command-Z restores the task", model.undoComplete() && task.completedAt == nil)
+        check("S-002 nothing left to undo", !model.undoComplete())
+
+        // S-003
+        check("S-003 Today lists the task due today", model.tasks(for: .list(.today)).contains(today))
+        check("S-003 Inbox hides a Someday task", !model.tasks(for: .list(.inbox)).contains(someday))
+        check("S-003 Someday lists it", model.tasks(for: .list(.someday)).contains(someday))
+        model.sidebar = Page.fixed[1]
+        check("S-003 Command-2 selects Today", model.sidebar == .list(.today))
+
+        // S-004
+        model.projectPrompt = .new
+        model.commitProjectPrompt(name: "Test project")
+        guard case .project(let projectID)? = model.sidebar, let project = model.project(projectID) else {
+            return check("S-004 New Project creates and selects a project", false)
+        }
+        check("S-004 New Project creates and selects a project", project.name == "Test project")
+        task.project = project
+        check("S-004 picking a project removes the task from Inbox", !model.tasks(for: .list(.inbox)).contains(task))
+        check("S-004 the project page lists it", model.tasks(for: .project(projectID)).contains(task))
+        model.selection = task.id
+        model.setDue(.now)
+        check("S-004 Command-T puts it in Today", model.tasks(for: .list(.today)).contains(task))
+        model.setDue(nil)
+        check("S-004 Shift-Command-T clears the due date", task.due == nil)
+
+        // S-005
+        model.selection = task.id
+        model.startSession()
+        guard let session = model.session else { return check("S-005 Command-Return starts a session", false) }
+        check("S-005 the session has the task and no end", session.task == task && session.endedAt == nil)
+        check("S-005 planned length comes from Settings", session.plannedMinutes == model.plannedMinutes)
+        check("S-005 the menu bar shows the countdown", model.menuLabel == Countdown.clock(model.plannedMinutes * 60), model.menuLabel ?? "nil")
+        model.debugAdvance(seconds: model.plannedMinutes * 60 + 5)
+        check("S-005 overflow shows +00:05", model.menuLabel == "+00:05", model.menuLabel ?? "nil")
+        model.startSession(on: today)
+        check("S-005 starting again stops the first", session.endedAt != nil && model.session?.task == today)
+
+        // S-006
+        model.pause()
+        check("S-006 Pause stops the clock", model.paused && model.menuLabel?.hasPrefix("⏸") == true)
+        model.resume()
+        check("S-006 Resume continues", !model.paused)
+        let sessions = sessionCount()
+        model.stopSession()
+        check("S-006 Stop ends the session", model.session == nil && sessionCount() == sessions)
+        model.toggleSession()
+        check("S-006 the hotkey with no session starts one on the selected task", model.session?.task == task)
+        model.toggleSession()
+        check("S-006 the hotkey with a session stops it", model.session == nil)
+        check("S-006 Sessions page lists every session", sessionCount() == 3, "\(sessionCount())")
+
+        // S-008
+        let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
+        recording.startedAt = Date.now.addingTimeInterval(-95)
+        context.insert(recording)
+        model.recorder.recording = recording
+        model.complete(today)
+        model.recorder.recording = nil
+        check("S-008 completing a task while recording adds a chapter",
+              recording.chapters.count == 1 && abs((recording.chapters.first?.offset ?? 0) - 95) < 2)
+        check("S-008 the chapter list starts at 0:00", recording.chapterText == "0:00 Recording\n1:35 Due today", recording.chapterText)
+        recording.copyChapters()
+        check("S-008 Copy puts the list on the pasteboard", NSPasteboard.general.string(forType: .string) == recording.chapterText)
     }
 
     private static func check(_ name: String, _ ok: Bool, _ detail: String = "") {
@@ -53,8 +130,7 @@ enum SelfTest {
         print(ok ? "PASS \(name)" : "FAIL \(name)\(detail.isEmpty ? "" : ": \(detail)")")
     }
 
-    /// Quits through NSApp.terminate, never exit(), and closes sheets first:
-    /// an open sheet refuses terminate, and the run would wait forever.
+    /// Quits through NSApp.terminate, never exit(), and closes sheets first.
     static func finish(code: Int32) {
         exitCode = code
         for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }

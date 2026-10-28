@@ -40,25 +40,31 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: "General"
+        case .general: "Sessions"
         case .appearance: "Appearance"
         }
     }
 
     var symbol: String {
         switch self {
-        case .general: "gearshape"
+        case .general: "timer"
         case .appearance: "paintpalette"
         }
     }
 }
 
 struct GeneralSettings: View {
-    @AppStorage("confirmDelete") private var confirmDelete = true
+    @AppStorage("plannedMinutes") private var plannedMinutes = 25
+    @AppStorage("micEnabled") private var micEnabled = true
 
     var body: some View {
-        Section("Items") {
-            Toggle("Ask before deleting items", isOn: $confirmDelete)
+        Section("Sessions") {
+            Stepper("Length: \(plannedMinutes) minutes", value: $plannedMinutes, in: 5...180, step: 5)
+            LabeledContent("Start or stop anywhere", value: "⌃⌥⌘S")
+        }
+        Section("Recording") {
+            Toggle("Microphone on", isOn: $micEnabled)
+            LabeledContent("Saved to", value: "~/Movies/OpticalFlow")
         }
     }
 }

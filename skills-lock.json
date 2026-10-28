@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-cli": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/code/agent-cli/SKILL.md",
+      "computedHash": "4d5b9f484b005d0d2fdfcd2191849268fc2910ab725957f7e9665b895816e7d8"
+    },
+    "app-brief": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/start/app-brief/SKILL.md",
+      "computedHash": "badbccdf061ca28c2ada6b191895bc0a9e740a43e5194c2eafc347d5e07b75d6"
+    },
+    "app-icon": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/design/app-icon/SKILL.md",
+      "computedHash": "81c801ab1f70048a11364a83fa5d8b4989a1a6407b3dab681a6242ee5c4d6aec"
+    },
+    "bama": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/start/bama/SKILL.md",
+      "computedHash": "e75dec1cdd7653d2a4895441a4be61e0cfbcd3cd718f712879ff97979aab9e14"
+    },
+    "build-and-verify": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/ship/build-and-verify/SKILL.md",
+      "computedHash": "3c0cd5547982cb75b4ad64b708cc5818b1503c89c044c17a738673f4a437064d"
+    },
+    "clone": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/plan/clone/SKILL.md",
+      "computedHash": "c348fe24cc727b3e5aeeac817a4ea0338690b15638ede35754c92271fd53922e"
+    },
+    "design-from-app": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/design/design-from-app/SKILL.md",
+      "computedHash": "4b6cecb264b541fcbb47aa0f2e6420ed95561eb6974f8337c0607836f484630c"
+    },
+    "design-kit": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/design/design-kit/SKILL.md",
+      "computedHash": "e17bd0b410f3362e25453bf8dd0c97cf4d82225178dbf3a1437e5500d7c84cca"
+    },
+    "design-system": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/design/design-system/SKILL.md",
+      "computedHash": "aa5f291851c3bc7216d55801b1bf2b593551179b5fa026c5e23576e97549340c"
+    },
+    "improve-architecture": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/code/improve-architecture/SKILL.md",
+      "computedHash": "b3af005a7761fd63149d36b7f895b5b994f7547377ec8c787a191a8117fe9181"
+    },
+    "improve-loop": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/ship/improve-loop/SKILL.md",
+      "computedHash": "024477068fc0ec99623df14f2ee9e59aefdbab04415114d0cfcee130e4ad9900"
+    },
+    "layout-grid": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/design/layout-grid/SKILL.md",
+      "computedHash": "95ba0fe369da0b0e0f0e0af95dfc5944161e5d5379d478ed8535a5d1b1838893"
+    },
+    "mac-design": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/design/mac-design/SKILL.md",
+      "computedHash": "e2a613e42a7a40f72dbafaa9a9ca8b1000a87493f705daef439b1dfe40192969"
+    },
+    "new-mac-app": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/start/new-mac-app/SKILL.md",
+      "computedHash": "5242be815600d18e1342d35e7415064a201eb07b03e7e1b12a9a5f5625352643"
+    },
+    "os-integrations": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/code/os-integrations/SKILL.md",
+      "computedHash": "35f326794f5d56dcf2fb870ec98f99d65c09b6c43608d876488042f3daac35de"
+    },
+    "performance": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/code/performance/SKILL.md",
+      "computedHash": "9c2cfd8f5be8cceb403b4944a40a8fe3ba2552092f7a70fc11a04ad91196acfe"
+    },
+    "research": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/plan/research/SKILL.md",
+      "computedHash": "130e7f83608437d5e8177a2d11af244b8196e1f739e11227b11537ed51e47cce"
+    },
+    "swift-swiftui": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/code/swift-swiftui/SKILL.md",
+      "computedHash": "68209f7891f16377689bc688d7fe4ff84b7e374bc5fcc201ac928e2ce17b26b0"
+    },
+    "test-mac-app": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/ship/test-mac-app/SKILL.md",
+      "computedHash": "f1e6d92d721ca924f9ac9a8aac86f42a94d66ed14f563ec2fd4d3a218b624c34"
+    },
+    "user-stories": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/plan/user-stories/SKILL.md",
+      "computedHash": "899dc428f2e6254571ab9c7bd23cbadc842445fd86d4503ecd3e067c440653a2"
+    },
+    "ux-design": {
+      "source": "daveebbelaar/bama",
+      "sourceType": "github",
+      "skillPath": "skills/design/ux-design/SKILL.md",
+      "computedHash": "d883f529591f22853927f8dc7d7cdb27f6eca9f943489dacfdaffb3fba4146f1"
+    }
+  }
+}

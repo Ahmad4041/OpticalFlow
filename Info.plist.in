@@ -13,5 +13,7 @@
 <key>LSMinimumSystemVersion</key><string>26.0</string>
 <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
 <key>NSHighResolutionCapable</key><true/>
+<key>NSMicrophoneUsageDescription</key><string>OpticalFlow records your voice with the screen when the microphone is on.</string>
+<key>NSCameraUsageDescription</key><string>OpticalFlow records a camera track next to the screen.</string>
 <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict></plist>

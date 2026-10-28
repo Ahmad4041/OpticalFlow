@@ -1,5 +1,5 @@
 import Testing
-@testable import OpticalFlowKit
+@testable import __APP_NAME__Kit
 
 @Test("Clean titles", arguments: [
     ("Buy milk", "Buy milk"),

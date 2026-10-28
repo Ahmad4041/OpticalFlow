@@ -7,7 +7,7 @@ import SwiftUI
 /// writes <page>-light.png and <page>-dark.png for every sidebar page, and
 /// settings-<tab>-light.png and settings-<tab>-dark.png for every Settings tab, then quits.
 /// Each PNG gets a <page>-<mode>-layout.json with the grid probes (tools/check-layout.swift).
-/// APP_SNAPSHOT_PAGES=all,starred limits the pages. Add "settings" to include Settings.
+/// APP_SNAPSHOT_PAGES=inbox,today limits the pages. Add "settings" to include Settings.
 /// Add APP_ACCENT=<id> to see the pages in another accent.
 enum Snapshot {
     static func runIfRequested(model: AppModel, openSettings: OpenSettingsAction) {
@@ -32,10 +32,12 @@ enum Snapshot {
             try? await Task.sleep(for: .seconds(1.5))
             for mode in ["light", "dark"] {
                 NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                for page in SidebarItem.allCases where only?.contains(page.rawValue) ?? true {
+                let pages = Page.fixed + model.projects.prefix(1).map { Page.project($0.uuid) }
+                for page in pages where only?.contains(page.snapshotName) ?? true {
                     model.sidebar = page
+                    model.selection = model.firstID(for: page)
                     try? await Task.sleep(for: .seconds(0.8))
-                    capture(to: "\(dir)/\(page.rawValue)-\(mode).png")
+                    capture(to: "\(dir)/\(page.snapshotName)-\(mode).png")
                 }
             }
             if only == nil || only?.contains("settings") == true {
@@ -47,7 +49,8 @@ enum Snapshot {
                     for tab in SettingsTab.allCases {
                         model.settingsTab = tab
                         try? await Task.sleep(for: .seconds(0.8))
-                        let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet }
+                        // The menu bar extra owns a visible window too; Settings is the one at normal level.
+                        let settings = NSApp.windows.first { $0.isVisible && $0 !== main && !$0.isSheet && $0.level == .normal }
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: settings)
                     }
                 }
