@@ -26,6 +26,7 @@ final class Recorder {
     /// Set before the first await in start: the picker can call back more than once.
     private var starting = false
     private var startedAt: Date?
+    private var screenStartedAt: Date?
     private let observer = PickerObserver()
     private let streamDelegate = StreamDelegate()
     private let camera = CameraRecorder()
@@ -109,6 +110,7 @@ final class Recorder {
         startedAt = .now
         recording = onStart?(url)
         if cameraStarted { recording?.cameraPath = cameraURL.path }
+        screenStartedAt = startedAt
         SCContentSharingPicker.shared.isActive = false
     }
 
@@ -120,6 +122,9 @@ final class Recorder {
         try? stream.removeRecordingOutput(output)
         await camera.stop()
         let duration = startedAt.map { Date.now.timeIntervalSince($0) } ?? 0
+        if let recording, let screenStartedAt, let firstFrame = camera.firstFrameAt {
+            recording.cameraOffset = firstFrame.timeIntervalSince(screenStartedAt)
+        }
         if let recording { onStop?(recording, duration) }
         recording = nil
         startedAt = nil
@@ -128,9 +133,12 @@ final class Recorder {
 
 /// The camera to a sidecar .mov, video only: the mic already goes into the screen recording.
 final class CameraRecorder {
-    private let session = AVCaptureSession()
+    let session = AVCaptureSession()
     private let output = AVCaptureMovieFileOutput()
     private let delegate = CameraDelegate()
+    private let bubble = CameraBubble()
+    /// When the first camera frame hit the file. Webcams warm up late; the export uses this to stay in sync.
+    private(set) var firstFrameAt: Date?
 
     /// False when there is no camera or no permission.
     func start(to url: URL) async -> Bool {
@@ -143,11 +151,15 @@ final class CameraRecorder {
         if session.outputs.isEmpty, session.canAddOutput(output) { session.addOutput(output) }
         session.commitConfiguration()
         session.startRunning()   // ponytail: blocks the main thread for ~100 ms; move to a queue if it shows
+        firstFrameAt = nil
+        delegate.onStart = { [weak self] in self?.firstFrameAt = .now }
         output.startRecording(to: url, recordingDelegate: delegate)
+        bubble.show(session: session)
         return true
     }
 
     func stop() async {
+        bubble.hide()
         if output.isRecording {
             await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
                 delegate.onFinish = { done.resume() }
@@ -160,7 +172,12 @@ final class CameraRecorder {
 }
 
 final class CameraDelegate: NSObject, AVCaptureFileOutputRecordingDelegate {
+    var onStart: (() -> Void)?
     var onFinish: (() -> Void)?
+
+    nonisolated func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
+        Task { @MainActor in self.onStart?() }
+    }
 
     nonisolated func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL,
                                 from connections: [AVCaptureConnection], error: (any Error)?) {

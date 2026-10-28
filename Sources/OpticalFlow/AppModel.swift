@@ -255,7 +255,7 @@ final class AppModel {
         var suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
         if camera != nil { suffix += " with camera" }
         let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(suffix).mp4")
-        try await Exporter.export(screen: recording.url, camera: camera, start: start, end: end, to: output)
+        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, start: start, end: end, to: output)
         let new = Recording(url: output, session: recording.session)
         new.startedAt = recording.startedAt.addingTimeInterval(start)
         new.duration = end - start

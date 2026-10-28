@@ -128,7 +128,7 @@ Acceptance:
 - [manual] AVCaptureMovieFileOutput writes <recording>-camera.mov; both start within 100 ms.
 - [snap] The detail shows a Camera row with the sidecar file name when one exists.
 - [self] Recording.cameraPath is optional and defaults to nil, so M1 databases keep loading.
-UX: "Camera" toggle under "Microphone" in the menu bar panel and in Settings > Recording ("Camera on, as a second file"). Off by default: the camera permission prompt should be a choice. The camera starts before the screen so its prompt never delays the capture.
+UX: "Camera" toggle under "Microphone" in the menu bar panel, the toolbar's Recording Options, and Settings > Recording. On by default. While recording, a round camera bubble floats bottom-right, always on top and draggable, so a display capture shows you live; the sidecar stays for the export composite and for window captures, which cannot see the bubble.
 Status: done
 
 ### S-012 Composite camera bubble into the export

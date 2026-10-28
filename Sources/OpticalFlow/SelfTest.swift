@@ -155,6 +155,10 @@ enum SelfTest {
             check("S-012 the composite keeps the screen size and range", abs(compositeSeconds - 2) < 0.3 && size == CGSize(width: 320, height: 240), "\(compositeSeconds) \(size)")
             check("S-012 the composite is named with camera", composite.url.lastPathComponent.hasSuffix("with camera.mp4"))
             check("S-012 the composite has one video track", try await asset.loadTracks(withMediaType: .video).count == 1)
+            original.cameraOffset = 2.5   // camera woke up late: only its first 0.5 s overlap the 1...3 range
+            let late = try await model.trim(original, start: 1, end: 3, withCamera: true)
+            let lateSeconds = try await AVURLAsset(url: late.url).load(.duration).seconds
+            check("S-012 a late camera keeps the screen's length", abs(lateSeconds - 2) < 0.3, "\(lateSeconds)")
         } catch {
             check("S-009/S-012 export", false, "\(error)")
         }

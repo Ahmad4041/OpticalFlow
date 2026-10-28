@@ -90,6 +90,8 @@ final class Recording {
     var chapters: [ChapterMark] = []
     /// The camera sidecar, when the camera was on. Optional so older databases keep loading.
     var cameraPath: String?
+    /// Seconds the camera's first frame came after the screen's start (negative: before). Default 0.
+    var cameraOffset: TimeInterval = 0
     var uuid: UUID = UUID()
     var session: Session?
 
