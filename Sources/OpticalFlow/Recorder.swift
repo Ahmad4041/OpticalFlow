@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import ScreenCaptureKit
 import UserNotifications
 
@@ -8,6 +9,9 @@ import UserNotifications
 final class Recorder {
     var micEnabled = UserDefaults.standard.object(forKey: "micEnabled") as? Bool ?? true {
         didSet { UserDefaults.standard.set(micEnabled, forKey: "micEnabled") }
+    }
+    var cameraEnabled = UserDefaults.standard.bool(forKey: "cameraEnabled") {
+        didSet { UserDefaults.standard.set(cameraEnabled, forKey: "cameraEnabled") }
     }
     /// The row for the capture in progress. Set by onStart, cleared on stop.
     var recording: Recording?
@@ -22,6 +26,7 @@ final class Recorder {
     private var startedAt: Date?
     private let observer = PickerObserver()
     private let streamDelegate = StreamDelegate()
+    private let camera = CameraRecorder()
 
     init() {
         observer.onPick = { [weak self] filter in Task { await self?.start(with: filter) } }
@@ -67,6 +72,9 @@ final class Recorder {
         let stamp = Date.now.formatted(Date.FormatStyle().year().month(.twoDigits).day(.twoDigits).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).second(.twoDigits))
             .replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: ".")
         let url = Self.directory.appending(path: "\(stamp).mp4")
+        // The camera starts first: its permission prompt must not delay the screen capture.
+        let cameraURL = Self.directory.appending(path: "\(stamp)-camera.mov")
+        let cameraStarted = cameraEnabled ? await camera.start(to: cameraURL) : false
         let outputConfig = SCRecordingOutputConfiguration()
         outputConfig.outputURL = url
         outputConfig.outputFileType = .mp4
@@ -78,12 +86,14 @@ final class Recorder {
             try await stream.startCapture()
         } catch {
             lastError = error.localizedDescription
+            if cameraStarted { await camera.stop() }
             return
         }
         self.stream = stream
         self.output = output
         startedAt = .now
         recording = onStart?(url)
+        if cameraStarted { recording?.cameraPath = cameraURL.path }
         SCContentSharingPicker.shared.isActive = false
     }
 
@@ -93,10 +103,57 @@ final class Recorder {
         self.output = nil
         try? await stream.stopCapture()
         try? stream.removeRecordingOutput(output)
+        await camera.stop()
         let duration = startedAt.map { Date.now.timeIntervalSince($0) } ?? 0
         if let recording { onStop?(recording, duration) }
         recording = nil
         startedAt = nil
+    }
+}
+
+/// The camera to a sidecar .mov, video only: the mic already goes into the screen recording.
+final class CameraRecorder {
+    private let session = AVCaptureSession()
+    private let output = AVCaptureMovieFileOutput()
+    private let delegate = CameraDelegate()
+
+    /// False when there is no camera or no permission.
+    func start(to url: URL) async -> Bool {
+        guard await AVCaptureDevice.requestAccess(for: .video),
+              let device = AVCaptureDevice.default(for: .video),
+              let input = try? AVCaptureDeviceInput(device: device) else { return false }
+        session.beginConfiguration()
+        session.sessionPreset = .high
+        if session.canAddInput(input) { session.addInput(input) }
+        if session.outputs.isEmpty, session.canAddOutput(output) { session.addOutput(output) }
+        session.commitConfiguration()
+        session.startRunning()   // ponytail: blocks the main thread for ~100 ms; move to a queue if it shows
+        output.startRecording(to: url, recordingDelegate: delegate)
+        return true
+    }
+
+    func stop() async {
+        if output.isRecording {
+            await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+                delegate.onFinish = { done.resume() }
+                output.stopRecording()
+            }
+        }
+        session.stopRunning()
+        for input in session.inputs { session.removeInput(input) }
+    }
+}
+
+final class CameraDelegate: NSObject, AVCaptureFileOutputRecordingDelegate {
+    var onFinish: (() -> Void)?
+
+    nonisolated func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL,
+                                from connections: [AVCaptureConnection], error: (any Error)?) {
+        if let error { print("camera: \(error)") }
+        Task { @MainActor in
+            self.onFinish?()
+            self.onFinish = nil
+        }
     }
 }
 

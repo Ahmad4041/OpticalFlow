@@ -88,6 +88,8 @@ final class Recording {
     var startedAt: Date = Date.now
     var duration: TimeInterval = 0
     var chapters: [ChapterMark] = []
+    /// The camera sidecar, when the camera was on. Optional so older databases keep loading.
+    var cameraPath: String?
     var uuid: UUID = UUID()
     var session: Session?
 
@@ -97,6 +99,8 @@ final class Recording {
     }
 
     var url: URL { URL(fileURLWithPath: path) }
+    var cameraURL: URL? { cameraPath.map { URL(fileURLWithPath: $0) } }
+    var hasCamera: Bool { cameraURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false }
     var title: String { session?.task?.title ?? "Recording" }
     var fileExists: Bool { FileManager.default.fileExists(atPath: path) }
     var chapterText: String { ChapterList.text(opening: title, marks: chapters) }

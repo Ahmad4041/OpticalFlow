@@ -56,6 +56,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 struct GeneralSettings: View {
     @AppStorage("plannedMinutes") private var plannedMinutes = 25
     @AppStorage("micEnabled") private var micEnabled = true
+    @AppStorage("cameraEnabled") private var cameraEnabled = false
 
     var body: some View {
         Section("Sessions") {
@@ -64,6 +65,7 @@ struct GeneralSettings: View {
         }
         Section("Recording") {
             Toggle("Microphone on", isOn: $micEnabled)
+            Toggle("Camera on, as a second file", isOn: $cameraEnabled)
             LabeledContent("Saved to", value: "~/Movies/OpticalFlow")
         }
     }

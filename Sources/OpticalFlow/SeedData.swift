@@ -60,6 +60,7 @@ enum SeedData {
         let recording = Recording(url: Recorder.directory.appending(path: "2026-10-28 14.02.11.mp4"), session: second)
         recording.startedAt = second.startedAt
         recording.duration = 1_710
+        recording.cameraPath = Recorder.directory.appending(path: "2026-10-28 14.02.11-camera.mov").path
         recording.chapters = [
             ChapterMark(title: "Add the model", offset: 312),
             ChapterMark(title: "Query in the list", offset: 905),

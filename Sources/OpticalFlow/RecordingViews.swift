@@ -60,6 +60,9 @@ struct RecordingDetail: View {
             LabeledContent("Recorded", value: recording.startedAt, format: .dateTime.month(.abbreviated).day().year().hour().minute())
             LabeledContent("Length", value: Countdown.clock(Int(recording.duration), padded: false))
             LabeledContent("File", value: recording.url.lastPathComponent)
+            if let cameraURL = recording.cameraURL {
+                LabeledContent("Camera", value: cameraURL.lastPathComponent)
+            }
             Section("Chapters") {
                 Text(recording.chapterText)
                     .monospacedDigit()

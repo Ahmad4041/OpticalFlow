@@ -122,10 +122,14 @@ Status: done
 
 ### S-011 Camera sidecar
 As the user, I toggle the camera in the popover and a second .mov of the camera is recorded alongside the screen.
+Screens: recording-detail, menubar
 Depends: S-007
 Acceptance:
-- [self] AVCaptureMovieFileOutput writes <recording>-camera.mov; both start within 100 ms.
-Status: todo
+- [manual] AVCaptureMovieFileOutput writes <recording>-camera.mov; both start within 100 ms.
+- [snap] The detail shows a Camera row with the sidecar file name when one exists.
+- [self] Recording.cameraPath is optional and defaults to nil, so M1 databases keep loading.
+UX: "Camera" toggle under "Microphone" in the menu bar panel and in Settings > Recording ("Camera on, as a second file"). Off by default: the camera permission prompt should be a choice. The camera starts before the screen so its prompt never delays the capture.
+Status: done
 
 ### S-012 Composite camera bubble into the export
 Depends: S-011, S-009
