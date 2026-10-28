@@ -108,8 +108,14 @@ Acceptance:
 Status: todo
 
 ### S-010 Open a recording in QuickTime or Finder
-Screens: recordings
-Status: todo
+As the user, I open a recording in QuickTime Player from its row, its context menu, or its detail, or reveal the file in Finder.
+Screens: recordings, recording-detail
+Depends: S-007
+Acceptance:
+- [snap] Each row has an Open button; the detail has Open and Show in Finder, disabled when the file is missing.
+- [manual] Open launches the default player for the file (QuickTime Player).
+UX: "Open" (not "Play") because the system player opens. Both actions in the row's context menu too.
+Status: done
 
 ### S-011 Camera sidecar
 As the user, I toggle the camera in the popover and a second .mov of the camera is recorded alongside the screen.

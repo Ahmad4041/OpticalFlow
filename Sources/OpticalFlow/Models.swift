@@ -101,6 +101,9 @@ final class Recording {
     var fileExists: Bool { FileManager.default.fileExists(atPath: path) }
     var chapterText: String { ChapterList.text(opening: title, marks: chapters) }
 
+    @MainActor func open() { NSWorkspace.shared.open(url) }
+    @MainActor func showInFinder() { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+
     @MainActor func copyChapters() {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(chapterText, forType: .string)
