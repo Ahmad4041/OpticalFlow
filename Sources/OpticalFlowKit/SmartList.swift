@@ -39,3 +39,19 @@ public enum SmartList: String, CaseIterable, Sendable {
         }
     }
 }
+
+/// Day headings for Upcoming.
+public enum DayGroup {
+    /// "Today", "Tomorrow", then "Thursday 30 Oct" within a week, then "30 Oct 2026".
+    public static func label(for date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+        let day = calendar.startOfDay(for: date)
+        let today = calendar.startOfDay(for: now)
+        let days = calendar.dateComponents([.day], from: today, to: day).day ?? 0
+        switch days {
+        case 0: return "Today"
+        case 1: return "Tomorrow"
+        case 2...6: return date.formatted(.dateTime.weekday(.wide).day().month(.abbreviated))
+        default: return date.formatted(.dateTime.day().month(.abbreviated).year())
+        }
+    }
+}

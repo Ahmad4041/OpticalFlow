@@ -161,6 +161,27 @@ struct TaskList: View {
         return page.title
     }
 
+    /// Upcoming, one section per due day, soonest first.
+    private var days: [(Date, [TaskItem])] {
+        let calendar = Calendar.current
+        let groups = Dictionary(grouping: visible) { calendar.startOfDay(for: $0.due ?? .distantFuture) }
+        return groups.keys.sorted().map { ($0, groups[$0]!.sorted { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) }) }
+    }
+
+    private func row(_ task: TaskItem) -> some View {
+        TaskRow(task: task, showProject: !isProjectPage)
+            .tag(task.id)
+            .contextMenu {
+                Button("Complete") { model.complete(task) }
+                Button("Start Session") { model.startSession(on: task) }
+                Divider()
+                Button("Delete", role: .destructive) {
+                    context.delete(task)
+                    try? context.save()
+                }
+            }
+    }
+
     private var isProjectPage: Bool {
         if case .project = page { return true }
         return false
@@ -169,18 +190,14 @@ struct TaskList: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selection) {
-            ForEach(visible) { task in
-                TaskRow(task: task, showProject: !isProjectPage)
-                    .tag(task.id)
-                    .contextMenu {
-                        Button("Complete") { model.complete(task) }
-                        Button("Start Session") { model.startSession(on: task) }
-                        Divider()
-                        Button("Delete", role: .destructive) {
-                            context.delete(task)
-                            try? context.save()
-                        }
+            if page == .list(.upcoming) {
+                ForEach(days, id: \.0) { day, tasks in
+                    Section(DayGroup.label(for: day)) {
+                        ForEach(tasks) { row($0) }
                     }
+                }
+            } else {
+                ForEach(visible) { row($0) }
             }
             if model.draftTitle != nil {
                 HStack(spacing: Space.sm) {

@@ -42,6 +42,8 @@ enum SeedData {
         let walkthrough = task("Record the SwiftData walkthrough", project: stream, due: .now, done: true, age: 5)
         task("Set up the OBS scene for the Mac stream", project: stream, due: day(2), age: 4)
         task("Try the new ScreenCaptureKit picker API", project: app, due: day(5), age: 3)
+        task("Publish the session recording", project: stream, due: day(1), age: 3)
+        task("Write show notes for the stream", project: stream, due: day(2), age: 3)
         task("Learn Metal shaders for the intro animation", someday: true, age: 2)
         task("Build a Stream Deck plugin", project: stream, someday: true, age: 1)
 

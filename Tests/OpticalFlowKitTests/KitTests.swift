@@ -53,3 +53,13 @@ func cleans(_ input: String, expected: String?) {
     #expect(kept == [ChapterMark(title: "B", offset: 40)])
     #expect(ChapterList.trimmed(marks, start: 0, end: 1000) == marks)
 }
+
+@Test func dayLabels() {
+    let cal = Calendar.current
+    let now = cal.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: 12))!
+    func day(_ n: Int) -> Date { cal.date(byAdding: .day, value: n, to: now)! }
+    #expect(DayGroup.label(for: day(0), now: now) == "Today")
+    #expect(DayGroup.label(for: day(1), now: now) == "Tomorrow")
+    #expect(DayGroup.label(for: day(2), now: now).hasPrefix("Saturday"))
+    #expect(DayGroup.label(for: day(10), now: now).contains("2026"))
+}

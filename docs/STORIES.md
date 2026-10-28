@@ -143,7 +143,15 @@ UX: One toggle in the Trim section, on by default, disabled when the sidecar fil
 Status: done
 
 ## M3 Time
-### S-013 Upcoming grouped by day. Status: todo
+### S-013 Upcoming grouped by day
+As the user, I open Upcoming and see tasks under one heading per day, soonest first.
+Screens: upcoming
+Depends: S-003
+Acceptance:
+- [snap] Upcoming shows sections headed "Tomorrow", then weekday names within a week, then dates.
+- [unit] DayGroup.label gives Today, Tomorrow, "Saturday 31 Oct", "8 Nov 2026".
+UX: Native List sections, no custom headers. Adding a task on Upcoming puts it under Tomorrow.
+Status: done
 ### S-014 Session end reminder picks a break length (5 / 15). Status: todo
 ### S-015 Idle for 5 minutes asks keep or discard; auto-stop on sleep. Status: todo
 
