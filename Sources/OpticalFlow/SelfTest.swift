@@ -145,6 +145,16 @@ enum SelfTest {
         check("S-016 a browser URL goes into the notes", fromSafari.notes == "From Safari: https://example.com")
         check("S-016 OpticalFlow itself adds nothing", FrontmostContext(appName: "").notes.isEmpty)
 
+        // S-017
+        model.search = "WRITE tests"
+        check("S-017 search matches title words in any case", model.matches(task))
+        check("S-017 search skips other tasks", !model.matches(today))
+        task.notes = "see the spec"
+        model.search = "spec"
+        check("S-017 search covers notes", model.matches(task))
+        model.search = ""
+        check("S-017 an empty search matches nothing", !model.matches(task))
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)

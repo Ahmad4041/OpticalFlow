@@ -183,7 +183,15 @@ Acceptance:
 - [manual] Control-Space works while another app is frontmost (Carbon hotkey, no permission); Escape or a click elsewhere closes it; the task appears in Inbox.
 UX: One field, no project or date here: speed over options. The panel sits a little above center. Also in File > Quick Entry. The browser URL needs the Automation prompt once per browser.
 Status: done
-### S-017 Search (Command-F) across tasks. Status: todo
+### S-017 Search across tasks
+As the user, I press Command-F, type words, and every open task whose title or notes contain all of them is listed, whatever page I am on.
+Screens: inbox
+Depends: S-003
+Acceptance:
+- [self] Words match in any order and case, across title and notes; done tasks are left out; an empty field shows the page again.
+- [snap] A search field in the toolbar; the list is headed "Search" while a query is active; no-match shows the system "No Results" view.
+UX: Native `.searchable` in the toolbar, so Command-F and Escape behave like every Mac app. Results show the project dot.
+Status: done
 ### S-018 Type-to-navigate the sidebar. Status: todo
 ### S-019 Natural-language due dates ("tomorrow", "fri"). Status: todo
 

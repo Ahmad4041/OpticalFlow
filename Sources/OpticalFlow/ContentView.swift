@@ -154,7 +154,10 @@ struct TaskList: View {
     @FocusState private var draftFocused: Bool
     let page: Page
 
-    private var visible: [TaskItem] { tasks.filter { model.visible($0, on: page) } }
+    private var searching: Bool { !model.search.isEmpty }
+    private var visible: [TaskItem] {
+        searching ? tasks.filter { model.matches($0) } : tasks.filter { model.visible($0, on: page) }
+    }
 
     private var title: String {
         if case .project(let id) = page { return projects.first { $0.uuid == id }?.name ?? "Project" }
@@ -169,7 +172,7 @@ struct TaskList: View {
     }
 
     private func row(_ task: TaskItem) -> some View {
-        TaskRow(task: task, showProject: !isProjectPage)
+        TaskRow(task: task, showProject: !isProjectPage || searching)
             .tag(task.id)
             .contextMenu {
                 Button("Complete") { model.complete(task) }
@@ -190,7 +193,7 @@ struct TaskList: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selection) {
-            if page == .list(.upcoming) {
+            if page == .list(.upcoming) && !searching {
                 ForEach(days, id: \.0) { day, tasks in
                     Section(DayGroup.label(for: day)) {
                         ForEach(tasks) { row($0) }
@@ -220,11 +223,16 @@ struct TaskList: View {
         }
         .overlay {
             if visible.isEmpty && model.draftTitle == nil {
-                ContentUnavailableView("No Tasks", systemImage: page.symbol,
-                                       description: Text("Press Command-N to add one."))
+                if searching {
+                    ContentUnavailableView.search(text: model.search)
+                } else {
+                    ContentUnavailableView("No Tasks", systemImage: page.symbol,
+                                           description: Text("Press Command-N to add one."))
+                }
             }
         }
-        .navigationTitle(title)
+        .searchable(text: $model.search, placement: .toolbar, prompt: "Search tasks")
+        .navigationTitle(searching ? "Search" : title)
         .toolbar {
             ToolbarItem {
                 Button("New Task", systemImage: "plus") { model.draftTitle = "" }

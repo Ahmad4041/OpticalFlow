@@ -14,6 +14,8 @@ final class AppModel {
         didSet { hideDoneBefore = .now; selection = nil }
     }
     var selection: PersistentIdentifier?
+    /// Command-F. Non-empty: every page shows matching open tasks instead of its own list.
+    var search = ""
     /// Non-nil while the inline new-task row is open.
     var draftTitle: String?
     /// Done tasks completed after this still show, dimmed, for two seconds.
@@ -114,6 +116,14 @@ final class AppModel {
     func tasks(for page: Page) -> [TaskItem] {
         let all = (try? context.fetch(FetchDescriptor<TaskItem>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
         return all.filter { visible($0, on: page) }
+    }
+
+    /// Open tasks whose title or notes contain the words of `search`, any order, case-insensitive.
+    func matches(_ task: TaskItem) -> Bool {
+        let words = search.split(whereSeparator: \.isWhitespace).map { $0.lowercased() }
+        guard !words.isEmpty else { return false }
+        let text = (task.title + " " + task.notes).lowercased()
+        return !task.isDone && words.allSatisfy { text.contains($0) }
     }
 
     func complete(_ task: TaskItem) {
