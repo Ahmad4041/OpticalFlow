@@ -46,3 +46,10 @@ func cleans(_ input: String, expected: String?) {
     #expect(text == "0:00 Session: auth\n1:35 Merged in\n1:02:05 Ship")
     #expect(ChapterList.text(opening: "Only", marks: []) == "0:00 Only")
 }
+
+@Test func trimmedChapters() {
+    let marks = [ChapterMark(title: "A", offset: 30), ChapterMark(title: "B", offset: 100), ChapterMark(title: "C", offset: 500)]
+    let kept = ChapterList.trimmed(marks, start: 60, end: 400)
+    #expect(kept == [ChapterMark(title: "B", offset: 40)])
+    #expect(ChapterList.trimmed(marks, start: 0, end: 1000) == marks)
+}

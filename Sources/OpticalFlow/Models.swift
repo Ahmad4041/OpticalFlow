@@ -398,6 +398,23 @@ final class AppModel {
         if recorder.isRecording { Task { await recorder.stop() } } else { recorder.pick() }
     }
 
+    // MARK: Export
+
+    /// Writes "<name>-<start>-<end>.mp4" next to the recording and returns its row, chapters shifted.
+    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval) async throws -> Recording {
+        let stem = recording.url.deletingPathExtension().lastPathComponent
+        let suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
+        let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(suffix).mp4")
+        try await Exporter.export(screen: recording.url, start: start, end: end, to: output)
+        let new = Recording(url: output, session: recording.session)
+        new.startedAt = recording.startedAt.addingTimeInterval(start)
+        new.duration = end - start
+        new.chapters = ChapterList.trimmed(recording.chapters, start: start, end: end)
+        context.insert(new)
+        save()
+        return new
+    }
+
     /// Tests only: pretend time passed.
     func debugAdvance(seconds: Int) {
         session?.seconds += seconds

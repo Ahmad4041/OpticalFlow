@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import SwiftData
 import OpticalFlowKit
 
@@ -23,13 +24,13 @@ enum SelfTest {
         }
         Task {
             try? await Task.sleep(for: .seconds(0.5))
-            run(model: model)
+            await run(model: model)
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)
         }
     }
 
-    private static func run(model: AppModel) {
+    private static func run(model: AppModel) async {
         let context = model.context
         func taskCount() -> Int { (try? context.fetchCount(FetchDescriptor<TaskItem>())) ?? -1 }
         func sessionCount() -> Int { (try? context.fetchCount(FetchDescriptor<Session>())) ?? -1 }
@@ -122,6 +123,24 @@ enum SelfTest {
         check("S-008 the chapter list starts at 0:00", recording.chapterText == "0:00 Recording\n1:35 Due today", recording.chapterText)
         recording.copyChapters()
         check("S-008 Copy puts the list on the pasteboard", NSPasteboard.general.string(forType: .string) == recording.chapterText)
+
+        // S-009
+        let source = Recorder.directory.appending(path: "selftest-source.mp4")
+        do {
+            try FileManager.default.createDirectory(at: Recorder.directory, withIntermediateDirectories: true)
+            try await TestVideo.make(at: source, seconds: 4)
+            let original = Recording(url: source, session: nil)
+            original.duration = 4
+            original.chapters = [ChapterMark(title: "Early", offset: 0.5), ChapterMark(title: "Kept", offset: 2)]
+            context.insert(original)
+            let trimmed = try await model.trim(original, start: 1, end: 3)
+            let seconds = try await AVURLAsset(url: trimmed.url).load(.duration).seconds
+            check("S-009 Export Trimmed writes the chosen range", abs(seconds - 2) < 0.3, "\(seconds)")
+            check("S-009 chapters shift by the trimmed start", trimmed.chapters == [ChapterMark(title: "Kept", offset: 1)])
+            check("S-009 the trimmed file sits next to the original", trimmed.url.deletingLastPathComponent() == source.deletingLastPathComponent() && trimmed.fileExists)
+        } catch {
+            check("S-009 Export Trimmed", false, "\(error)")
+        }
     }
 
     private static func check(_ name: String, _ ok: Bool, _ detail: String = "") {
@@ -135,5 +154,40 @@ enum SelfTest {
         exitCode = code
         for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }
         NSApp.terminate(nil)
+    }
+}
+
+/// A short silent clip with a keyframe on every frame, so a passthrough trim is exact.
+enum TestVideo {
+    static func make(at url: URL, seconds: Int, width: Int = 320, height: Int = 240) async throws {
+        try? FileManager.default.removeItem(at: url)
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: width,
+            AVVideoHeightKey: height,
+            AVVideoCompressionPropertiesKey: [AVVideoMaxKeyFrameIntervalKey: 1],
+        ])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+        ])
+        writer.add(input)
+        writer.startWriting()
+        writer.startSession(atSourceTime: .zero)
+        for frame in 0..<(seconds * 10) {
+            while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(5)) }
+            var buffer: CVPixelBuffer?
+            CVPixelBufferCreate(nil, width, height, kCVPixelFormatType_32BGRA, nil, &buffer)
+            guard let buffer else { throw Exporter.ExportError.noVideo }
+            CVPixelBufferLockBaseAddress(buffer, [])
+            if let base = CVPixelBufferGetBaseAddress(buffer) {
+                memset(base, frame % 2 == 0 ? 0x40 : 0xC0, CVPixelBufferGetDataSize(buffer))
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+            adaptor.append(buffer, withPresentationTime: CMTime(value: CMTimeValue(frame), timescale: 10))
+        }
+        input.markAsFinished()
+        await writer.finishWriting()
+        if let error = writer.error { throw error }
     }
 }

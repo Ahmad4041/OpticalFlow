@@ -105,7 +105,10 @@ Screens: recording-detail
 Depends: S-007
 Acceptance:
 - [self] AVMutableComposition + AVAssetExportSession passthrough writes a new file next to the original; chapter offsets shift by the trimmed start.
-Status: todo
+- [snap] The detail has a Trim section with Start and End sliders, their times, and an Export Trimmed button.
+- [self] The new file appears as its own row in Recordings and is selected.
+UX: Trim lives in the detail, not a sheet. Sliders with m:ss labels; Export Trimmed is disabled under one second or while exporting. The original is never changed. Output name: "<original> <start> to <end>.mp4".
+Status: done
 
 ### S-010 Open a recording in QuickTime or Finder
 As the user, I open a recording in QuickTime Player from its row, its context menu, or its detail, or reveal the file in Finder.

@@ -47,7 +47,12 @@ struct RecordingList: View {
 }
 
 struct RecordingDetail: View {
+    @Environment(AppModel.self) private var model
     let recording: Recording
+    @State private var start: Double = 0
+    @State private var end: Double = 0
+    @State private var exporting = false
+    @State private var exportError: String?
 
     var body: some View {
         Form {
@@ -62,6 +67,23 @@ struct RecordingDetail: View {
                 Button("Copy Chapters", systemImage: "doc.on.doc") { recording.copyChapters() }
                     .help("Copy the chapter list for a YouTube description")
             }
+            Section("Trim") {
+                LabeledContent("Start") {
+                    Slider(value: $start, in: 0...max(1, recording.duration)) { Text("Start") }
+                    Text(Countdown.clock(Int(start), padded: false)).monospacedDigit().frame(width: 64, alignment: .trailing)
+                }
+                LabeledContent("End") {
+                    Slider(value: $end, in: 0...max(1, recording.duration)) { Text("End") }
+                    Text(Countdown.clock(Int(end), padded: false)).monospacedDigit().frame(width: 64, alignment: .trailing)
+                }
+                HStack {
+                    Button("Export Trimmed", systemImage: "scissors") { export() }
+                        .disabled(exporting || !recording.fileExists || end - start < 1)
+                        .help("Write a new file with only the part between Start and End")
+                    if exporting { ProgressView().controlSize(.small) }
+                    if let exportError { Text(exportError).foregroundStyle(.secondary) }
+                }
+            }
             Section {
                 HStack {
                     Button("Open", systemImage: "play.rectangle") { recording.open() }
@@ -72,5 +94,23 @@ struct RecordingDetail: View {
             }
         }
         .formStyle(.grouped)
+        .onChange(of: recording.uuid, initial: true) {
+            start = 0
+            end = recording.duration
+            exportError = nil
+        }
+    }
+
+    private func export() {
+        exporting = true
+        Task {
+            defer { exporting = false }
+            do {
+                let new = try await model.trim(recording, start: start, end: end)
+                model.selection = new.id
+            } catch {
+                exportError = error.localizedDescription
+            }
+        }
     }
 }

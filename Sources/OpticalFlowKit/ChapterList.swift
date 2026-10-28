@@ -37,3 +37,11 @@ public enum ChapterList {
             .joined(separator: "\n")
     }
 }
+
+extension ChapterList {
+    /// Chapters that survive a trim to [start, end): offsets move back by `start`.
+    public static func trimmed(_ marks: [ChapterMark], start: TimeInterval, end: TimeInterval) -> [ChapterMark] {
+        marks.filter { $0.offset >= start && $0.offset < end }
+            .map { ChapterMark(title: $0.title, offset: $0.offset - start) }
+    }
+}
