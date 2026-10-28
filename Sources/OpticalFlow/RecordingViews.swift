@@ -69,11 +69,11 @@ struct RecordingDetail: View {
             }
             Section("Trim") {
                 LabeledContent("Start") {
-                    Slider(value: $start, in: 0...max(1, recording.duration)) { Text("Start") }
+                    Slider(value: $start, in: 0...max(1, recording.duration))
                     Text(Countdown.clock(Int(start), padded: false)).monospacedDigit().frame(width: 64, alignment: .trailing)
                 }
                 LabeledContent("End") {
-                    Slider(value: $end, in: 0...max(1, recording.duration)) { Text("End") }
+                    Slider(value: $end, in: 0...max(1, recording.duration))
                     Text(Countdown.clock(Int(end), padded: false)).monospacedDigit().frame(width: 64, alignment: .trailing)
                 }
                 HStack {
