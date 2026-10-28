@@ -32,6 +32,8 @@ enum SelfTest {
 
     private static func run(model: AppModel) async {
         let context = model.context
+        // The Mac may really be idle while this runs; only S-015 sets idle on purpose.
+        model.idleOverride = 0
         func taskCount() -> Int { (try? context.fetchCount(FetchDescriptor<TaskItem>())) ?? -1 }
         func sessionCount() -> Int { (try? context.fetchCount(FetchDescriptor<Session>())) ?? -1 }
 
@@ -43,7 +45,7 @@ enum SelfTest {
         check("S-001 the title is cleaned", task.title == "Write tests")
         check("S-001 an Inbox task has no project and no due", task.project == nil && task.due == nil)
         check("S-001 an empty title is rejected", model.addTask(title: "   ") == nil && taskCount() == before + 1)
-        guard let today = model.addTask(title: "Due today", on: .list(.today)) else { return check("S-001 Today add", false) }
+        guard let today = model.addTask(title: "Ship the build", on: .list(.today)) else { return check("S-001 Today add", false) }
         check("S-001 a Today task is due today", Calendar.current.isDateInToday(today.due ?? .distantPast))
         guard let someday = model.addTask(title: "Later", on: .list(.someday)) else { return check("S-001 Someday add", false) }
         check("S-001 a Someday task is flagged", someday.isSomeday)
@@ -167,6 +169,8 @@ enum SelfTest {
             context.delete(plain)
         }
         try? context.save()
+        check("S-019 a deleted selection resolves to nil instead of crashing", model.selectedTask == nil)
+        model.selection = task.id
 
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
@@ -177,7 +181,7 @@ enum SelfTest {
         model.recorder.recording = nil
         check("S-008 completing a task while recording adds a chapter",
               recording.chapters.count == 1 && abs((recording.chapters.first?.offset ?? 0) - 95) < 2)
-        check("S-008 the chapter list starts at 0:00", recording.chapterText == "0:00 Recording\n1:35 Due today", recording.chapterText)
+        check("S-008 the chapter list starts at 0:00", recording.chapterText == "0:00 Recording\n1:35 Ship the build", recording.chapterText)
         recording.copyChapters()
         check("S-008 Copy puts the list on the pasteboard", NSPasteboard.general.string(forType: .string) == recording.chapterText)
 

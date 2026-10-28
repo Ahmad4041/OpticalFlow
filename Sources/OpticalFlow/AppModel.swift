@@ -74,8 +74,14 @@ final class AppModel {
 
     // MARK: Tasks
 
-    var selectedTask: TaskItem? { selection.flatMap { context.model(for: $0) as? TaskItem } }
-    var selectedRecording: Recording? { selection.flatMap { context.model(for: $0) as? Recording } }
+    var selectedTask: TaskItem? { selected() }
+    var selectedRecording: Recording? { selected() }
+
+    /// The selected row as its type, or nil once it has been deleted (a deleted model asserts on access).
+    private func selected<T: PersistentModel>() -> T? {
+        guard let selection, let model = context.registeredModel(for: selection) as T?, !model.isDeleted else { return nil }
+        return model
+    }
 
     var projects: [Project] {
         (try? context.fetch(FetchDescriptor<Project>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []

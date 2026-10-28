@@ -17,3 +17,9 @@ Symptom: the user saw no camera in the recording.
 Cause: the sidecar .mov was written every time, but nothing showed the camera on screen, so a display capture never contained the user. Expectation was an OBS-style live overlay.
 Fix: a round always-on-top camera bubble (NSPanel + AVCaptureVideoPreviewLayer) while the camera records; the display capture includes it.
 Rule: A background artifact (a sidecar file) is invisible to the user. Every capture the app makes needs a visible sign while it runs.
+
+## 2026-10-29 Crash (SwiftData assertion) after deleting the selected task
+Symptom: "OpticalFlow quit unexpectedly", EXC_BAD_INSTRUCTION in SwiftData on the main thread, during the self-test.
+Cause: `selection` still pointed at a task the test had deleted; `context.model(for:)` on a deleted id asserts when the toolbar re-rendered.
+Fix: `AppModel.selected()` uses `registeredModel(for:)` and checks `isDeleted`, so every reader of the selection gets nil.
+Rule: Resolve a stored PersistentIdentifier through one guarded accessor; never call `context.model(for:)` on an id that may be gone.
