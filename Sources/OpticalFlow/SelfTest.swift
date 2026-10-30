@@ -192,6 +192,17 @@ enum SelfTest {
         model.miniTimer.hide()
         check("S-021 and hides", !model.miniTimer.isShown)
 
+        // S-023
+        model.move([task.uuid.uuidString], to: .list(.someday))
+        check("S-023 dropping on Someday flags it and clears the date", task.isSomeday && task.due == nil)
+        model.move([task.uuid.uuidString], to: .list(.today))
+        check("S-023 dropping on Today sets due today and unflags", !task.isSomeday && model.tasks(for: .list(.today)).contains(task))
+        model.move([task.uuid.uuidString], to: .list(.inbox))
+        check("S-023 dropping on Inbox clears the project", task.project == nil && model.tasks(for: .list(.inbox)).contains(task))
+        model.move([task.uuid.uuidString], to: .project(projectID))
+        check("S-023 dropping on a project assigns it", task.project == project)
+        check("S-025 each page has its own empty state", Page.list(.inbox).emptyState.title != Page.list(.today).emptyState.title)
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)
@@ -247,6 +258,12 @@ enum SelfTest {
             check("S-028 a rounded top-left large camera with blur exports", abs(styledSeconds - 1.5) < 0.3, "\(styledSeconds)")
             check("S-028 the layout is remembered", UserDefaults.standard.data(forKey: "cameraLayout") != nil)
             model.recorder.cameraLayout = saved
+            // S-027: the YouTube preset re-encodes to H.264.
+            let yt = try await model.trim(original, start: 0, end: 2, youtube: true)
+            let ytTrack = try await AVURLAsset(url: yt.url).loadTracks(withMediaType: .video).first
+            let ytCodec = (try await ytTrack?.load(.formatDescriptions))?.first.map { CMFormatDescriptionGetMediaSubType($0) }
+            check("S-027 the YouTube export is H.264", ytCodec == kCMVideoCodecType_H264 && yt.url.lastPathComponent.hasSuffix("youtube.mp4"), "\(String(describing: ytCodec))")
+
             // S-031: a zoomed export follows a cursor track.
             let cursorURL = Recorder.directory.appending(path: "selftest-cursor.json")
             try JSONEncoder().encode(CursorTrack(samples: [.init(t: 0, x: 0.9, y: 0.9), .init(t: 2, x: 0.1, y: 0.1)])).write(to: cursorURL)

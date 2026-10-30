@@ -59,6 +59,7 @@ struct RecordingDetail: View {
     @State private var exporting = false
     @State private var withCamera = true
     @State private var followCursor = false
+    @State private var youtube = true
     @State private var player: AVPlayer?
     @State private var exportError: String?
 
@@ -113,6 +114,8 @@ struct RecordingDetail: View {
                     Toggle("Follow the cursor (2x zoom)", isOn: $followCursor)
                         .help("Crops to half the frame around the pointer and glides with it")
                 }
+                Toggle("YouTube preset (1080p H.264, AAC)", isOn: $youtube)
+                    .help("Re-encodes to what YouTube recommends. Off keeps the original codec where possible.")
                 HStack {
                     Button("Export Trimmed", systemImage: "scissors") { export() }
                         .disabled(exporting || !recording.fileExists || end - start < 1)
@@ -146,7 +149,7 @@ struct RecordingDetail: View {
         Task {
             defer { exporting = false }
             do {
-                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera, followCursor: followCursor)
+                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera, followCursor: followCursor, youtube: youtube)
                 model.selection = new.id
             } catch {
                 exportError = error.localizedDescription

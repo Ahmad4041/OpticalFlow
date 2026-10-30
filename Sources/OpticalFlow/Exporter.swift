@@ -7,7 +7,7 @@ import OpticalFlowKit
 enum Exporter {
     /// `cameraOffset`: seconds the camera's first frame came after the screen started.
     static func export(screen: URL, camera: URL? = nil, cameraOffset: TimeInterval = 0, layout: CameraLayout = CameraLayout(),
-                       cursor: CursorTrack? = nil, start: TimeInterval, end: TimeInterval, to output: URL) async throws {
+                       cursor: CursorTrack? = nil, youtube: Bool = false, start: TimeInterval, end: TimeInterval, to output: URL) async throws {
         let asset = AVURLAsset(url: screen)
         let composition = AVMutableComposition()
         let range = CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 600),
@@ -52,7 +52,9 @@ enum Exporter {
             videoComposition = studio
         }
 
-        let preset = videoComposition == nil ? AVAssetExportPresetPassthrough : AVAssetExportPresetHEVCHighestQuality
+        // YouTube's recommendation is H.264 at up to 1080p with AAC; that preset re-encodes to exactly that.
+        let preset = youtube ? AVAssetExportPreset1920x1080
+            : videoComposition == nil ? AVAssetExportPresetPassthrough : AVAssetExportPresetHEVCHighestQuality
         guard let session = AVAssetExportSession(asset: composition, presetName: preset) else { throw ExportError.noSession }
         session.videoComposition = videoComposition
         try? FileManager.default.removeItem(at: output)

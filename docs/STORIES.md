@@ -301,15 +301,39 @@ UX: Bars are plain rounded rectangles with hover help; no chart library. The run
 Status: done
 
 ## M6 Polish
-### S-023 Drag tasks between lists and projects. Status: todo
-### S-024 Context menus on task and project rows. Status: todo
-### S-025 Empty states per page. Status: todo
+### S-023 Drag tasks between lists and projects
+As the user, I drag a task onto Inbox, Today, Upcoming, Someday, or a project in the sidebar and it moves there.
+Screens: inbox
+Depends: S-003
+Acceptance:
+- [self] Dropping on Someday flags it and clears the date; on Today sets due today; on Inbox clears the project; on a project assigns it.
+- [manual] The sidebar row highlights while dragging over it; Sessions and Recordings refuse the drop.
+UX: Native List drag (the task's id as text) and dropDestination on sidebar rows. The same moves live in the row's context menu for the keyboard-minded.
+Status: done
+### S-024 Context menus on task and project rows
+Screens: inbox
+Acceptance:
+- [manual] Task row: Complete, Start Session, Due Today, Due Tomorrow, Someday, Clear Due Date, Move to Project ▸, Delete. Project row: New Task in <project>, Rename…, Delete.
+Status: done
+### S-025 Empty states per page
+Screens: inbox, today, upcoming, someday, project
+Acceptance:
+- [self] Each page has its own title and hint (Inbox Zero; Nothing Due Today; Nothing Scheduled; No Someday Ideas; No Tasks Here).
+- [snap] An empty page shows the system unavailable view with that text.
+Status: done
 ### S-026 App icon
 Screens: dock
 Acceptance:
 - [manual] tools/icon_review.sh shows a timer ring with a record dot over three flow arcs, readable at 16 pt, in default, dark, tinted, and clear looks.
 Status: done
-### S-027 Export preset 1080p H.264 for YouTube. Status: todo
+### S-027 YouTube export preset
+As the user, I leave "YouTube preset" on and the export is 1080p H.264 with AAC, which YouTube recommends.
+Screens: recording-detail
+Depends: S-009
+Acceptance:
+- [self] The export's video track is H.264 and the file name ends in "youtube".
+UX: On by default; off keeps passthrough (or HEVC when the compositor runs). File names say what was applied.
+Status: done
 
 ## Dropped
 - Share links and cloud upload: needs a server.
