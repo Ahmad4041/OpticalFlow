@@ -155,6 +155,18 @@ enum Page: Hashable {
         }
     }
 
+    /// Title and hint for an empty page.
+    var emptyState: (title: String, hint: String) {
+        switch self {
+        case .list(.inbox): ("Inbox Zero", "Nothing waiting. Control-Space adds a task from anywhere.")
+        case .list(.today): ("Nothing Due Today", "Drag a task here, or select one and press Command-T.")
+        case .list(.upcoming): ("Nothing Scheduled", "End a new task with a date: tomorrow, fri, in 3 days, 5 nov.")
+        case .list(.someday): ("No Someday Ideas", "Park a task here when it is not for now.")
+        case .project: ("No Tasks Here", "Press Command-N to add one to this project.")
+        default: ("Nothing Here", "")
+        }
+    }
+
     var showsTasks: Bool {
         switch self {
         case .list, .project: true
