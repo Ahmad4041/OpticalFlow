@@ -44,15 +44,20 @@ struct MiniTimerView: View {
     var body: some View {
         HStack(spacing: Space.sm) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(model.menuLabel ?? "--:--")
+                Text(model.menuLabel ?? (model.recorder.isRecording ? "● REC" : "--:--"))
                     .font(.system(size: 26, weight: .medium, design: .rounded))
                     .monospacedDigit()
-                Text(model.session?.task?.title ?? (model.breakUntil != nil ? "Break" : "No session"))
+                Text(model.recorder.isRecording && model.session == nil ? "Recording" : (model.session?.task?.title ?? (model.breakUntil != nil ? "Break" : "No session")))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             Spacer(minLength: Space.xs)
+            if model.recorder.isRecording {
+                Button("Stop Recording", systemImage: "stop.circle.fill") { model.toggleRecording() }
+                    .foregroundStyle(.red)
+                    .help("Stop recording")
+            }
             if model.session != nil {
                 Button(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill") {
                     if model.paused { model.resume() } else { model.pause() }

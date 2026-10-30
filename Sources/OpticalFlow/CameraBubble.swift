@@ -15,7 +15,7 @@ final class CameraBubble {
         panel.level = .floating
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false   // a shadow is computed from the window's alpha and showed as a square halo
         panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.sharingType = .readOnly
@@ -23,11 +23,16 @@ final class CameraBubble {
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
         preview.masksToBounds = true
+        preview.backgroundColor = NSColor.clear.cgColor
         preview.borderWidth = 3
         preview.borderColor = NSColor.white.withAlphaComponent(0.9).cgColor
+        // Layer-hosting: set the layer first, then wantsLayer, and keep the host layer clear.
         let view = NSView()
+        let host = CALayer()
+        host.backgroundColor = NSColor.clear.cgColor
+        host.addSublayer(preview)
+        view.layer = host
         view.wantsLayer = true
-        view.layer = preview
         panel.contentView = view
         self.panel = panel
         self.preview = preview

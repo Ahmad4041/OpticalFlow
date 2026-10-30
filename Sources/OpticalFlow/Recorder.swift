@@ -105,7 +105,12 @@ final class Recorder {
         config.capturesAudio = true
         config.sampleRate = 48_000
         config.channelCount = 2
-        config.captureMicrophone = micEnabled
+        // ScreenCaptureKit does not raise the microphone prompt itself: without this, the mic track is silence.
+        if micEnabled, !(await AVCaptureDevice.requestAccess(for: .audio)) {
+            lastError = "No microphone: allow OpticalFlow in System Settings > Privacy & Security > Microphone."
+        }
+        config.captureMicrophone = micEnabled && AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        config.excludesCurrentProcessAudio = true
         config.queueDepth = 6
 
         try? FileManager.default.createDirectory(at: Self.directory, withIntermediateDirectories: true)

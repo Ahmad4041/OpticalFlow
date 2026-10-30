@@ -47,3 +47,18 @@ Symptom: in snapshots the Recordings page selected its first row but the detail 
 Cause: `selected()` used `registeredModel(for:)`, which returns nil for a row no object holds. The self-test kept the recording in a local, the snapshot did not.
 Fix: fetch by `persistentModelID` with a limit of one; nil for a deleted row, found for an unreferenced one.
 Rule: A self-test must not keep references the real app would not keep; check through the same path the UI uses, or hold nothing.
+
+## 2026-10-31 Recordings were silent
+Symptom: a 40 s recording had a stereo AAC track with RMS 0 and peak 0.
+Cause: `captureMicrophone` was set without ever requesting microphone access. ScreenCaptureKit does not raise the TCC prompt; the system log showed no microphone decision for the app. The mixed track came out as zeros.
+Fix: `AVCaptureDevice.requestAccess(for: .audio)` before starting; capture the mic only when authorized; say where to allow it otherwise.
+Rule: Every capture device needs its own permission request before use; a framework that consumes the device does not ask on your behalf.
+
+## 2026-10-31 Camera bubble showed a white circle inside a square
+Cause: the preview layer was installed as the view's own layer after `wantsLayer`, and the window shadow was computed from a square alpha mask.
+Fix: layer-hosting view with a clear host layer and the preview as a sublayer; no window shadow.
+Rule: For a custom layer on NSView, assign `layer` first, then `wantsLayer = true`, and keep a clear host layer.
+
+## 2026-10-31 No controls on screen while recording
+Fix: the mini timer floats up when a recording starts, with a red Stop Recording button, and hides when the recording ends with no session running.
+Rule: Any long-running capture shows a visible control to stop it without hunting through menus.

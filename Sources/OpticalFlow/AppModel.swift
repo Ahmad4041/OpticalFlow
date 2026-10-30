@@ -69,11 +69,14 @@ final class AppModel {
             let recording = Recording(url: url, session: session)
             context.insert(recording)
             save()
+            // Floating controls while recording, like a capture bar: timer, pause, stop recording.
+            miniTimer.show()
             return recording
         }
         recorder.onStop = { [weak self] recording, duration in
             recording.duration = duration
             self?.save()
+            if self?.session == nil { self?.miniTimer.hide() }
         }
         // A sleeping Mac never works; stop the session and any recording.
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
