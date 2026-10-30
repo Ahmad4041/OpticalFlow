@@ -23,3 +23,9 @@ Symptom: "OpticalFlow quit unexpectedly", EXC_BAD_INSTRUCTION in SwiftData on th
 Cause: `selection` still pointed at a task the test had deleted; `context.model(for:)` on a deleted id asserts when the toolbar re-rendered.
 Fix: `AppModel.selected()` uses `registeredModel(for:)` and checks `isDeleted`, so every reader of the selection gets nil.
 Rule: Resolve a stored PersistentIdentifier through one guarded accessor; never call `context.model(for:)` on an id that may be gone.
+
+## 2026-10-31 Self-test and snapshots hung with no output; the app had no window
+Symptom: `tools/selftest.sh` printed nothing and never exited; a plain launch from the agent's shell showed no window on any Space, even for commits that had passed before.
+Cause: the agent's shell was sandboxed in this session. A process it spawns cannot connect to WindowServer, so NSApplication runs its event loop with no windows and the `.task` that starts the self-test never fires.
+Fix: both scripts launch the app through `open -W --stdout --stderr --env`, so LaunchServices starts it outside the shell's sandbox.
+Rule: Launch GUI apps for checks through `open`, never by exec'ing the binary; and when a tool prints nothing, probe the window list before suspecting the code.

@@ -31,6 +31,8 @@ struct OpticalFlowApp: App {
                 }
         }
         .modelContainer(model.container)
+        // Always open at launch, even after the window was closed last time.
+        .restorationBehavior(.disabled)
         .defaultSize(width: 1180, height: 740)
         .windowToolbarStyle(.unified)
         .commands {
@@ -135,6 +137,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    /// Dock click with the window closed: bring it back.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { NSApp.windows.first { $0.canBecomeMain }?.makeKeyAndOrderFront(nil) }
+        return true
+    }
 
     /// A recording in progress is finalized before quitting.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
