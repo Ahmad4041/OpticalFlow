@@ -92,6 +92,8 @@ final class Recording {
     var cameraPath: String?
     /// Seconds the camera's first frame came after the screen's start (negative: before). Default 0.
     var cameraOffset: TimeInterval = 0
+    /// JSON sidecar with the pointer path, for the follow-cursor zoom. Optional for older databases.
+    var cursorPath: String?
     var uuid: UUID = UUID()
     var session: Session?
 
@@ -102,6 +104,10 @@ final class Recording {
 
     var url: URL { URL(fileURLWithPath: path) }
     var cameraURL: URL? { cameraPath.map { URL(fileURLWithPath: $0) } }
+    var cursorURL: URL? { cursorPath.map { URL(fileURLWithPath: $0) } }
+    var cursorTrack: CursorTrack? {
+        cursorURL.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode(CursorTrack.self, from: $0) }
+    }
     var hasCamera: Bool { cameraURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false }
     var title: String { session?.task?.title ?? "Recording" }
     var fileExists: Bool { FileManager.default.fileExists(atPath: path) }

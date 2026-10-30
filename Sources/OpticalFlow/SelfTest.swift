@@ -227,6 +227,16 @@ enum SelfTest {
             check("S-028 a rounded top-left large camera with blur exports", abs(styledSeconds - 1.5) < 0.3, "\(styledSeconds)")
             check("S-028 the layout is remembered", UserDefaults.standard.data(forKey: "cameraLayout") != nil)
             model.recorder.cameraLayout = saved
+            // S-031: a zoomed export follows a cursor track.
+            let cursorURL = Recorder.directory.appending(path: "selftest-cursor.json")
+            try JSONEncoder().encode(CursorTrack(samples: [.init(t: 0, x: 0.9, y: 0.9), .init(t: 2, x: 0.1, y: 0.1)])).write(to: cursorURL)
+            original.cursorPath = cursorURL.path
+            let zoomed = try await model.trim(original, start: 0.5, end: 3, followCursor: true)
+            let zoomedAsset = AVURLAsset(url: zoomed.url)
+            let zoomedSize = try await zoomedAsset.loadTracks(withMediaType: .video).first?.load(.naturalSize) ?? .zero
+            let zoomedSeconds = try await zoomedAsset.load(.duration).seconds
+            check("S-031 a follow-cursor export keeps the frame size and range", zoomedSize == CGSize(width: 320, height: 240) && abs(zoomedSeconds - 2.5) < 0.3, "\(zoomedSize) \(zoomedSeconds)")
+            check("S-031 the zoomed file is named", zoomed.url.lastPathComponent.hasSuffix("zoomed.mp4"))
             original.cameraOffset = 2.5   // camera woke up late: only its first 0.5 s overlap the 1...3 range
             let late = try await model.trim(original, start: 1, end: 3, withCamera: true)
             let lateSeconds = try await AVURLAsset(url: late.url).load(.duration).seconds

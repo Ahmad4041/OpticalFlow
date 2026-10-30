@@ -89,3 +89,12 @@ func cleans(_ input: String, expected: String?) {
     #expect(CameraLayout(shape: .circle).cornerRadius(for: br) == 240)
     #expect(CameraLayout(shape: .rounded).cornerRadius(for: tl) == 26)
 }
+
+@Test func cursorViewport() {
+    let track = CursorTrack(samples: [.init(t: 0, x: 0.5, y: 0.5), .init(t: 2, x: 0.02, y: 0.98)])
+    #expect(track.viewport(at: 1, zoom: 2) == CGRect(x: 0.25, y: 0.25, width: 0.5, height: 0.5))
+    #expect(track.viewport(at: 3, zoom: 2) == CGRect(x: 0, y: 0.5, width: 0.5, height: 0.5))
+    #expect(CursorTrack().viewport(at: 1, zoom: 2) == CGRect(x: 0, y: 0, width: 1, height: 1))
+    let smooth = track.smoothed()
+    #expect(smooth.samples[1].x > 0.02 && smooth.samples[1].x < 0.5)
+}

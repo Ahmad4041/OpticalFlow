@@ -232,6 +232,27 @@ Acceptance:
 UX: Export only. The live bubble shows the raw camera because per-frame segmentation on the live preview would cost the CPU that the screen capture needs on an Intel Mac. Said in the toggle's help text.
 Status: done
 
+### S-030 Preview a recording in the editor
+As the user, I play the recording in the detail and set the trim start and end from the playhead.
+Screens: recording-detail
+Depends: S-009
+Acceptance:
+- [snap] A Preview section with the system player above Trim; Set Start Here, Set End Here, Play from Start.
+- [manual] Set Start Here takes the playhead time; Play from Start seeks to the trim start.
+UX: AVKit's VideoPlayer, no custom scrubber. Sliders stay for fine moves.
+Status: done
+
+### S-031 Follow the cursor in the export
+As the user, I turn on "Follow the cursor (2x zoom)" and the export shows half the frame around my pointer, gliding as it moves.
+Screens: recording-detail
+Depends: S-009
+Acceptance:
+- [unit] CursorTrack.viewport centers on the pointer and clamps to the frame; smoothing moves samples toward the previous one.
+- [self] Every recording writes a <name>-cursor.json sidecar (10 samples a second); a zoomed export keeps the frame size and range and is named "zoomed".
+- [manual] The zoom follows the pointer smoothly without snapping at the edges.
+UX: Fixed 2x zoom, always on when the toggle is on. Auto zoom-in on clicks and zoom-out when idle are later; said in the help text.
+Status: done
+
 ## M5 System
 ### S-020 App Intents: start/stop session for Shortcuts and Apple Focus. Status: todo
 ### S-021 Always-on-top mini timer window. Status: todo

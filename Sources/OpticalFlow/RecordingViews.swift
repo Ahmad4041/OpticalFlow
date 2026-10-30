@@ -1,4 +1,5 @@
 import AppKit
+import AVKit
 import SwiftData
 import SwiftUI
 import OpticalFlowKit
@@ -53,6 +54,8 @@ struct RecordingDetail: View {
     @State private var end: Double = 0
     @State private var exporting = false
     @State private var withCamera = true
+    @State private var followCursor = false
+    @State private var player: AVPlayer?
     @State private var exportError: String?
 
     var body: some View {
@@ -71,6 +74,24 @@ struct RecordingDetail: View {
                 Button("Copy Chapters", systemImage: "doc.on.doc") { recording.copyChapters() }
                     .help("Copy the chapter list for a YouTube description")
             }
+            Section("Preview") {
+                if let player {
+                    VideoPlayer(player: player)
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                    HStack {
+                        Button("Set Start Here", systemImage: "arrow.right.to.line") { start = player.currentTime().seconds; if end <= start { end = recording.duration } }
+                        Button("Set End Here", systemImage: "arrow.left.to.line") { end = player.currentTime().seconds }
+                        Spacer()
+                        Button("Play from Start", systemImage: "play") {
+                            player.seek(to: CMTime(seconds: start, preferredTimescale: 600))
+                            player.play()
+                        }
+                    }
+                } else {
+                    Text("The file is missing.").foregroundStyle(.secondary)
+                }
+            }
             Section("Trim") {
                 LabeledContent("Start") {
                     Slider(value: $start, in: 0...max(1, recording.duration))
@@ -83,6 +104,10 @@ struct RecordingDetail: View {
                 if recording.cameraURL != nil {
                     Toggle("Include the camera in the corner", isOn: $withCamera)
                         .disabled(!recording.hasCamera)
+                }
+                if recording.cursorURL != nil {
+                    Toggle("Follow the cursor (2x zoom)", isOn: $followCursor)
+                        .help("Crops to half the frame around the pointer and glides with it")
                 }
                 HStack {
                     Button("Export Trimmed", systemImage: "scissors") { export() }
@@ -106,7 +131,10 @@ struct RecordingDetail: View {
             start = 0
             end = recording.duration
             exportError = nil
+            player?.pause()
+            player = recording.fileExists ? AVPlayer(url: recording.url) : nil
         }
+        .onDisappear { player?.pause() }
     }
 
     private func export() {
@@ -114,7 +142,7 @@ struct RecordingDetail: View {
         Task {
             defer { exporting = false }
             do {
-                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera)
+                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera, followCursor: followCursor)
                 model.selection = new.id
             } catch {
                 exportError = error.localizedDescription

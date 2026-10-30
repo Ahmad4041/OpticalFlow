@@ -38,6 +38,9 @@ final class Recorder {
     private var starting = false
     private var startedAt: Date?
     private var screenStartedAt: Date?
+    private var cursor = CursorTrack()
+    private var cursorTimer: Timer?
+    private var cursorURL: URL?
     private let observer = PickerObserver()
     private let streamDelegate = StreamDelegate()
     private let camera = CameraRecorder()
@@ -123,6 +126,33 @@ final class Recorder {
         if cameraStarted { recording?.cameraPath = cameraURL.path }
         screenStartedAt = startedAt
         SCContentSharingPicker.shared.isActive = false
+        trackCursor(in: filter.contentRect, to: Self.directory.appending(path: "\(stamp)-cursor.json"))
+    }
+
+    /// Ten pointer samples a second, as fractions of the captured rect (CG coordinates, y from the top).
+    private func trackCursor(in rect: CGRect, to url: URL) {
+        cursor = CursorTrack()
+        cursorURL = url
+        recording?.cursorPath = url.path
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
+        let started = Date.now
+        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                let p = NSEvent.mouseLocation
+                let cg = CGPoint(x: p.x, y: screenHeight - p.y)
+                guard rect.width > 0, rect.height > 0 else { return }
+                self?.cursor.samples.append(.init(t: Date.now.timeIntervalSince(started),
+                                                  x: min(max((cg.x - rect.minX) / rect.width, 0), 1),
+                                                  y: min(max((cg.y - rect.minY) / rect.height, 0), 1)))
+            }
+        }
+    }
+
+    private func stopCursorTracking() {
+        cursorTimer?.invalidate()
+        cursorTimer = nil
+        if let cursorURL, let data = try? JSONEncoder().encode(cursor) { try? data.write(to: cursorURL) }
+        cursorURL = nil
     }
 
     func stop() async {
@@ -131,6 +161,7 @@ final class Recorder {
         self.output = nil
         try? await stream.stopCapture()
         try? stream.removeRecordingOutput(output)
+        stopCursorTracking()
         await camera.stop()
         let duration = startedAt.map { Date.now.timeIntervalSince($0) } ?? 0
         if let recording, let screenStartedAt, let firstFrame = camera.firstFrameAt {

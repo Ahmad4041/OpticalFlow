@@ -16,14 +16,22 @@ nonisolated final class StudioInstruction: NSObject, AVVideoCompositionInstructi
     let cameraID: CMPersistentTrackID?
     let cameraTransform: CGAffineTransform
     let layout: CameraLayout
+    /// Follow-cursor zoom: the smoothed pointer path and the time the trim starts at in it.
+    let cursor: CursorTrack?
+    let cursorOffset: TimeInterval
+    let zoom: CGFloat
 
     init(timeRange: CMTimeRange, screenID: CMPersistentTrackID, cameraID: CMPersistentTrackID?,
-         cameraTransform: CGAffineTransform, layout: CameraLayout) {
+         cameraTransform: CGAffineTransform, layout: CameraLayout,
+         cursor: CursorTrack? = nil, cursorOffset: TimeInterval = 0, zoom: CGFloat = 2) {
         self.timeRange = timeRange
         self.screenID = screenID
         self.cameraID = cameraID
         self.cameraTransform = cameraTransform
         self.layout = layout
+        self.cursor = cursor?.smoothed()
+        self.cursorOffset = cursorOffset
+        self.zoom = zoom
         requiredSourceTrackIDs = ([screenID] + (cameraID.map { [$0] } ?? [])).map { NSNumber(value: $0) }
     }
 }
@@ -59,6 +67,14 @@ nonisolated final class StudioCompositor: NSObject, AVVideoCompositing, @uncheck
             }
             let canvas = request.renderContext.size
             var image = CIImage(cvPixelBuffer: screen)
+            if let cursor = instruction.cursor {
+                let v = cursor.viewport(at: request.compositionTime.seconds + instruction.cursorOffset, zoom: instruction.zoom)
+                let px = CGRect(x: v.minX * canvas.width, y: (1 - v.minY - v.height) * canvas.height,
+                                width: v.width * canvas.width, height: v.height * canvas.height)
+                let scale = canvas.width / px.width
+                image = image.cropped(to: px)
+                    .transformed(by: CGAffineTransform(translationX: -px.minX, y: -px.minY).concatenating(CGAffineTransform(scaleX: scale, y: scale)))
+            }
             if let cameraID = instruction.cameraID, let camera = request.sourceFrame(byTrackID: cameraID) {
                 image = overlay(camera: camera, transform: instruction.cameraTransform, layout: instruction.layout,
                                 on: image, canvas: canvas)

@@ -7,7 +7,7 @@ import OpticalFlowKit
 enum Exporter {
     /// `cameraOffset`: seconds the camera's first frame came after the screen started.
     static func export(screen: URL, camera: URL? = nil, cameraOffset: TimeInterval = 0, layout: CameraLayout = CameraLayout(),
-                       start: TimeInterval, end: TimeInterval, to output: URL) async throws {
+                       cursor: CursorTrack? = nil, start: TimeInterval, end: TimeInterval, to output: URL) async throws {
         let asset = AVURLAsset(url: screen)
         let composition = AVMutableComposition()
         let range = CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 600),
@@ -22,6 +22,7 @@ enum Exporter {
         }
 
         var videoComposition: AVMutableVideoComposition?
+        var cameraLayer: (id: CMPersistentTrackID, transform: CGAffineTransform)?
         if let camera {
             let cameraAsset = AVURLAsset(url: camera)
             if let cameraTrack = try await cameraAsset.loadTracks(withMediaType: .video).first,
@@ -36,20 +37,22 @@ enum Exporter {
                                                         end: CMTime(seconds: cameraEnd, preferredTimescale: 600)),
                                             of: cameraTrack, at: at)
                 }
-                let size = try await screenTrack.load(.naturalSize)
-                let cameraTransform = try await cameraTrack.load(.preferredTransform)
-                let studio = AVMutableVideoComposition()
-                studio.customVideoCompositorClass = StudioCompositor.self
-                studio.renderSize = size
-                studio.frameDuration = CMTime(value: 1, timescale: 30)
-                studio.instructions = [StudioInstruction(timeRange: CMTimeRange(start: .zero, duration: composition.duration),
-                                                         screenID: video.trackID, cameraID: pip.trackID,
-                                                         cameraTransform: cameraTransform, layout: layout)]
-                videoComposition = studio
+                cameraLayer = (pip.trackID, try await cameraTrack.load(.preferredTransform))
             }
         }
+        if cameraLayer != nil || cursor != nil {
+            let studio = AVMutableVideoComposition()
+            studio.customVideoCompositorClass = StudioCompositor.self
+            studio.renderSize = try await screenTrack.load(.naturalSize)
+            studio.frameDuration = CMTime(value: 1, timescale: 30)
+            studio.instructions = [StudioInstruction(timeRange: CMTimeRange(start: .zero, duration: composition.duration),
+                                                     screenID: video.trackID, cameraID: cameraLayer?.id,
+                                                     cameraTransform: cameraLayer?.transform ?? .identity, layout: layout,
+                                                     cursor: cursor, cursorOffset: start)]
+            videoComposition = studio
+        }
 
-        let preset = camera == nil ? AVAssetExportPresetPassthrough : AVAssetExportPresetHEVCHighestQuality
+        let preset = videoComposition == nil ? AVAssetExportPresetPassthrough : AVAssetExportPresetHEVCHighestQuality
         guard let session = AVAssetExportSession(asset: composition, presetName: preset) else { throw ExportError.noSession }
         session.videoComposition = videoComposition
         try? FileManager.default.removeItem(at: output)
