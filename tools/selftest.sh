@@ -5,7 +5,7 @@ set -u
 rm -rf ~/Library/Saved\ Application\ State/com.ahmadnaeem.opticalflow.savedState
 store=/tmp/OpticalFlow-self.store
 log=/tmp/OpticalFlow-self.log
-rm -f $store $store-shm $store-wal $log
-open -W -n --stdout $log --stderr $log --env APP_STORE=$store ~/Applications/OpticalFlow.app --args --selftest
+rm -f $store $store-shm $store-wal /tmp/OpticalFlow-self.sock $log
+open -W -n --stdout $log --stderr $log --env APP_STORE=$store --env APP_AGENT_SOCKET=/tmp/OpticalFlow-self.sock ~/Applications/OpticalFlow.app --args --selftest
 cat $log
 grep -q "^SELFTEST PASS" $log

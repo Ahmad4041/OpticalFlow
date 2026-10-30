@@ -105,6 +105,10 @@ struct BoardCard: View {
         .fixedSize(horizontal: false, vertical: true)   // the stripe has no height of its own; the text sets the card's
         .background(.background, in: RoundedRectangle(cornerRadius: Space.sm))
         .overlay(RoundedRectangle(cornerRadius: Space.sm).strokeBorder(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary), lineWidth: selected ? 2 : 1))
+        .popover(isPresented: Binding(get: { selected }, set: { if !$0, selected { model.selection = nil } }), arrowEdge: .trailing) {
+            TaskDetail(task: task)
+                .frame(width: 380, height: 520)
+        }
         .contextMenu {
             Button("Start Session") { model.startSession(on: task) }
             Button(task.recordsSession ? "Stop Recording Sessions" : "Record Sessions") { task.recordsSession.toggle(); model.save() }

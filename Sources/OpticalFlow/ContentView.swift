@@ -173,11 +173,8 @@ struct DetailColumn: View {
 
     var body: some View {
         if case .project(let id) = model.sidebar, model.showsBoard, let project = model.project(id) {
-            // The board takes the wide column; the selected card's detail slides in as an inspector.
+            // The board takes the wide column; a card's detail opens as a popover from the card.
             BoardView(project: project)
-                .inspector(isPresented: Binding(get: { model.selectedTask != nil }, set: { if !$0 { model.selection = nil } })) {
-                    if let task = model.selectedTask { TaskDetail(task: task).inspectorColumnWidth(min: 280, ideal: 340) }
-                }
         } else if let task = model.selectedTask {
             TaskDetail(task: task)
         } else if let recording = model.selectedRecording {

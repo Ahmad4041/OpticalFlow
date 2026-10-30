@@ -10,10 +10,10 @@ log=/tmp/OpticalFlow-snap.log
 # A crashed run leaves saved window state, and the next launch would wait on a "reopen windows?" alert.
 rm -rf ~/Library/Saved\ Application\ State/com.ahmadnaeem.opticalflow.savedState
 # Seed data only fills an empty store, so start from nothing.
-rm -f $store $store-shm $store-wal $log
+rm -f $store $store-shm $store-wal /tmp/OpticalFlow-test.sock $log
 rm -rf $shots
 extra=()
 [[ -n "${APP_SNAPSHOT_PAGES:-}" ]] && extra+=(--env "APP_SNAPSHOT_PAGES=$APP_SNAPSHOT_PAGES")
 [[ -n "${APP_ACCENT:-}" ]] && extra+=(--env "APP_ACCENT=$APP_ACCENT")
-open -W -n --stdout $log --stderr $log --env APP_STORE=$store --env APP_SEED=1 --env APP_SNAPSHOT=$shots "${extra[@]}" ~/Applications/OpticalFlow.app
+open -W -n --stdout $log --stderr $log --env APP_STORE=$store --env APP_AGENT_SOCKET=/tmp/OpticalFlow-test.sock --env APP_SEED=1 --env APP_SNAPSHOT=$shots "${extra[@]}" ~/Applications/OpticalFlow.app
 cat $log

@@ -62,3 +62,8 @@ Rule: For a custom layer on NSView, assign `layer` first, then `wantsLayer = tru
 ## 2026-10-31 No controls on screen while recording
 Fix: the mini timer floats up when a recording starts, with a red Stop Recording button, and hides when the recording ends with no session running.
 Rule: Any long-running capture shows a visible control to stop it without hunting through menus.
+
+## 2026-10-31 Snapshot run hung with no output while the real app was open
+Cause: the test instance bound the agent socket at the default path, which the running app already owned; `listen` unlinked and rebound it and the two instances contended before the main view's task got to the snapshot code.
+Fix: `tools/snap.sh` and `tools/selftest.sh` set `APP_AGENT_SOCKET` to a /tmp path, as `check-agent-cli.sh` already did.
+Rule: Every test launch isolates every shared resource the app opens: the store, the movie folder, and the socket.
