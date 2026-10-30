@@ -78,6 +78,20 @@ func cleans(_ input: String, expected: String?) {
     #expect(DueDateParser.parse("tomorrow", now: now) == .init(title: "tomorrow", due: nil))
     #expect(DueDateParser.parse("Buy milk", now: now) == .init(title: "Buy milk", due: nil))
     #expect(DueDateParser.parse("Read the book in sunlight", now: now).due == nil)
+    func at(_ d: Int, _ h: Int, _ m: Int = 0) -> Date { cal.date(bySettingHour: h, minute: m, second: 0, of: day(d))! }
+    #expect(DueDateParser.parse("Call Anna fri at 3pm", now: now) == .init(title: "Call Anna", due: at(1, 15), hasTime: true))
+    #expect(DueDateParser.parse("tomorrow at 10 call the bank", now: now) == .init(title: "call the bank", due: at(1, 10), hasTime: true))
+    #expect(DueDateParser.parse("Standup at 9:30 on Monday", now: now) == .init(title: "Standup", due: at(4, 9, 30), hasTime: true))
+    #expect(DueDateParser.parse("Pay rent on the 5th of November", now: now).due == cal.date(from: DateComponents(year: 2026, month: 11, day: 5)))
+    #expect(DueDateParser.parse("Pay rent on the 5th of November", now: now).title == "Pay rent")
+    #expect(DueDateParser.parse("Dentist November 5th 2 pm", now: now) == .init(title: "Dentist", due: cal.date(from: DateComponents(year: 2026, month: 11, day: 5, hour: 14)), hasTime: true))
+    #expect(DueDateParser.parse("Buy milk at 3", now: now) == .init(title: "Buy milk", due: at(0, 15), hasTime: true))
+    #expect(DueDateParser.parse("Lunch at noon", now: now) == .init(title: "Lunch", due: at(1, 12), hasTime: true))
+    #expect(DueDateParser.parse("Fix login tonight", now: now) == .init(title: "Fix login", due: at(0, 20), hasTime: true))
+    #expect(DueDateParser.parse("Rent on the 1st", now: now).due == cal.date(from: DateComponents(year: 2026, month: 11, day: 1)))
+    #expect(DueDateParser.parse("Call 3 friends", now: now).due == nil)
+    #expect(DueDateParser.parse("Sort 2 decks", now: now).due == nil)
+    #expect(DueDateParser.parse("Release 2026-11-05", now: now).due == cal.date(from: DateComponents(year: 2026, month: 11, day: 5)))
 }
 
 @Test func cameraLayoutFrames() {

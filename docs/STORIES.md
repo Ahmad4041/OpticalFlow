@@ -364,6 +364,16 @@ Acceptance:
 - [self] CLI: tasks add --subtasks, tasks update --subtasks, --check, --uncheck; JSON carries subtasks.
 Status: done
 
+### S-044 Dates and times in plain words
+As the user, I type or say "call the bank tomorrow at 3pm", "standup at 9:30 on Monday", or "pay rent on the 5th of November", and the task gets that date and time while the title keeps only the words that matter.
+Screens: today, board
+Depends: S-001, S-041
+Acceptance:
+- [unit] the parser finds a date and a time anywhere in the sentence: weekdays, ordinals, month names, "tonight", "at 3", "noon", ISO dates; "call 3 friends" and "sort 2 decks" stay untouched.
+- [self] a timed task keeps hasDueTime, shows its time on rows and cards, and lists in Upcoming.
+UX: Detail has a Time switch next to the date; the CLI --due takes the same words.
+Status: done
+
 ### S-042 Hand a task to a sandboxed agent
 As the user, I hand a task with its notes to an agent that works on it in a sandbox for the long run, and see its progress and result on the card.
 Screens: board

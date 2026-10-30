@@ -152,6 +152,7 @@ final class AppModel {
         let parsed = DueDateParser.parse(clean)
         let task = TaskItem(title: parsed.title)
         task.due = parsed.due
+        task.hasDueTime = parsed.hasTime
         switch page ?? sidebar ?? .list(.inbox) {
         case .list(.today): task.due = task.due ?? .now
         case .list(.upcoming): task.due = task.due ?? Calendar.current.date(byAdding: .day, value: 1, to: .now)
@@ -304,7 +305,7 @@ final class AppModel {
         case .addSubtask(let match, let title):
             guard let task = found(match) else { return "No open task matches “\(match)”." }
             guard let clean = TaskTitle.clean(title) else { return "Nothing to add." }
-            task.checklist.append(ChecklistItem(title: clean))
+            task.subtasks.append(ChecklistItem(title: clean))
             save()
             return "Added “\(clean)” under “\(task.title)”."
         case .addNote(let match, let note):

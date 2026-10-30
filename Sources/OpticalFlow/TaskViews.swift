@@ -133,7 +133,7 @@ struct TaskRow: View {
             Spacer()
             if let due = task.due {
                 let overdue = !task.isDone && due < Calendar.current.startOfDay(for: .now)
-                Text(due, format: .dateTime.month(.abbreviated).day())
+                Text(task.hasDueTime ? due.formatted(.dateTime.month(.abbreviated).day().hour().minute()) : due.formatted(.dateTime.month(.abbreviated).day()))
                     .font(.callout)
                     .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
             }
@@ -148,8 +148,8 @@ struct TaskRow: View {
                     .labelStyle(.iconOnly)
                     .font(.caption)
             }
-            if !task.checklist.isEmpty {
-                let progress = Checklist.progress(task.checklist)
+            if !task.subtasks.isEmpty {
+                let progress = Checklist.progress(task.subtasks)
                 Label("\(progress.done)/\(progress.total)", systemImage: "checklist")
                     .font(.caption)
                     .foregroundStyle(progress.done == progress.total ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
@@ -183,14 +183,15 @@ struct TaskDetail: View {
             Toggle("Due date", isOn: Binding(get: { task.due != nil }, set: { task.due = $0 ? .now : nil }))
             if task.due != nil {
                 DatePicker("Due", selection: Binding(get: { task.due ?? .now }, set: { task.due = $0 }),
-                           displayedComponents: .date)
+                           displayedComponents: task.hasDueTime ? [.date, .hourAndMinute] : [.date])
+                Toggle("Time", isOn: $task.hasDueTime)
             }
             Toggle("Someday", isOn: $task.isSomeday)
             Picker("Priority", selection: $task.priority) {
                 ForEach(Priority.allCases, id: \.self) { Text($0.title).tag($0) }
             }
             Section {
-                ForEach($task.checklist) { $item in
+                ForEach($task.subtasks) { $item in
                     HStack(spacing: Space.sm) {
                         Toggle("Done", isOn: $item.isDone)
                             .labelsHidden()
@@ -200,7 +201,7 @@ struct TaskDetail: View {
                             .textFieldStyle(.plain)
                             .strikethrough(item.isDone)
                             .foregroundStyle(item.isDone ? .secondary : .primary)
-                        Button("Remove", systemImage: "xmark.circle.fill") { task.checklist.removeAll { $0.id == item.id } }
+                        Button("Remove", systemImage: "xmark.circle.fill") { task.subtasks.removeAll { $0.id == item.id } }
                             .buttonStyle(.borderless)
                             .labelStyle(.iconOnly)
                             .foregroundStyle(.tertiary)
@@ -213,12 +214,12 @@ struct TaskDetail: View {
                         .labelsHidden()
                         .textFieldStyle(.plain)
                         .onSubmit {
-                            if let clean = TaskTitle.clean(newSubtask) { task.checklist.append(ChecklistItem(title: clean)) }
+                            if let clean = TaskTitle.clean(newSubtask) { task.subtasks.append(ChecklistItem(title: clean)) }
                             newSubtask = ""
                         }
                 }
             } header: {
-                let progress = Checklist.progress(task.checklist)
+                let progress = Checklist.progress(task.subtasks)
                 HStack {
                     Text("Subtasks")
                     Spacer()

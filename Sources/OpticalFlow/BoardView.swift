@@ -105,7 +105,7 @@ struct BoardCard: View {
 
     private var selected: Bool { model.selection == task.id }
     private var overdue: Bool { task.due.map { !task.isDone && $0 < Calendar.current.startOfDay(for: .now) } ?? false }
-    private var progress: (done: Int, total: Int) { Checklist.progress(task.checklist) }
+    private var progress: (done: Int, total: Int) { Checklist.progress(task.subtasks) }
     private var firstNoteLine: String? {
         task.notes.split(whereSeparator: \.isNewline).first.map(String.init)
     }
@@ -152,7 +152,7 @@ struct BoardCard: View {
                 }
                 HStack(spacing: Space.sm) {
                     if let due = task.due {
-                        Label(DayGroup.label(for: due), systemImage: "calendar")
+                        Label(DayGroup.label(for: due) + (task.hasDueTime ? ", " + due.formatted(.dateTime.hour().minute()) : ""), systemImage: "calendar")
                             .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                             .lineLimit(1)
                     }

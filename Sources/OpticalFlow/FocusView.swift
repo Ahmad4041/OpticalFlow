@@ -191,8 +191,8 @@ struct FocusView: View {
                         .foregroundStyle(project.color)
                     Text(project.name)
                 }
-                if let due = task?.due {
-                    Text(due, format: .dateTime.month(.abbreviated).day())
+                if let task, let due = task.due {
+                    Text(task.hasDueTime ? due.formatted(.dateTime.month(.abbreviated).day().hour().minute()) : due.formatted(.dateTime.month(.abbreviated).day()))
                 }
                 if task?.recordsSession == true {
                     Image(systemName: "record.circle")

@@ -72,3 +72,8 @@ Rule: Every test launch isolates every shared resource the app opens: the store,
 The built-in "MacBook Pro Microphone" on this Mac delivers 48 kHz float buffers of exact zeros to every app; the HyperX QuadCast S delivers signal. Both the voice panel and ScreenCaptureKit read the system default input, so both were silent while permissions were fine. Found by measuring the peak sample level in the tap (`opticalflow agent state`) and by recognizing a generated file (`agent transcribe`), which separated the microphone from recognition.
 Fix: a Microphone preference (Settings > Agent and > Recording) that the audio engine and `SCStreamConfiguration.microphoneCaptureDeviceID` both use; the panel warns after two seconds of zeros.
 Rule: when audio is silent, measure the input level before blaming permissions, and let people choose the device; the system default is not always the one that works.
+
+## 2026-10-31 Opening an older task crashed after the subtasks build
+Cause: the new `checklist` column was a non-optional Codable array. Rows from before the column had no value, and SwiftData asserts when it decodes a missing value into a non-optional array (scalars get their default; arrays do not).
+Fix: the stored property is optional; `subtasks` reads it as an empty list. Verified by nulling the column in a test store and reading the task.
+Rule: A new Codable or array attribute on a @Model is optional with a computed non-optional accessor. Only scalars get a default on migration.

@@ -61,7 +61,7 @@ enum AgentCommands {
                      params: [.init(name: "title", required: true, help: "the title; may end with a date like \"tomorrow\" or \"fri\""),
                               .init(name: "notes", help: "notes under the title"),
                               .init(name: "project", help: "a project id or name"),
-                              .init(name: "due", help: "today, tomorrow, fri, in 3 days, 5 nov, or 2026-11-05"),
+                              .init(name: "due", help: "today, tomorrow at 3pm, fri, in 3 days, 5 nov, or 2026-11-05"),
                               .init(name: "someday", kind: .boolean, help: "park it in Someday"),
                               .init(name: "priority", help: "none, low, medium, or high (urgent)"),
                               .init(name: "subtasks", help: "steps separated by ; (\"write test; run it\")"),
@@ -336,15 +336,18 @@ enum AgentCommands {
     static func apply(_ args: Args, to task: TaskItem, in model: AppModel) throws {
         if let notes = args.string("notes") { task.notes = notes }
         if let project = args.string("project") { task.project = project == "none" ? nil : try findProject(project, in: model) }
-        if let due = args.string("due") { task.due = due == "none" ? nil : try parseDue(due) }
+        if let due = args.string("due") {
+            if due == "none" { task.due = nil; task.hasDueTime = false }
+            else { let parsed = try parseDue(due); task.due = parsed.date; task.hasDueTime = parsed.hasTime }
+        }
         if let someday = try args.bool("someday") { task.isSomeday = someday }
         if let doing = try args.bool("doing") { task.isDoing = doing }
         if let record = try args.bool("record") { task.recordsSession = record }
-        if let text = args.string("subtasks") { task.checklist += Checklist.parse(text) }
+        if let text = args.string("subtasks") { task.subtasks += Checklist.parse(text) }
         for (key, done) in [("check", true), ("uncheck", false)] {
             guard let text = args.string(key) else { continue }
-            guard let index = Checklist.index(of: text, in: task.checklist) else { throw AgentError.invalid("no subtask matches \"\(text)\"") }
-            task.checklist[index].isDone = done
+            guard let index = Checklist.index(of: text, in: task.subtasks) else { throw AgentError.invalid("no subtask matches \"\(text)\"") }
+            task.subtasks[index].isDone = done
         }
         if let text = args.string("priority") {
             guard let priority = Priority.parse(text) else { throw AgentError.usage("--priority takes none, low, medium, or high") }
@@ -352,11 +355,10 @@ enum AgentCommands {
         }
     }
 
-    static func parseDue(_ text: String) throws -> Date {
-        if let date = DueDateParser.parse("x \(text)").due { return date }
-        let iso = DateFormatter(); iso.dateFormat = "yyyy-MM-dd"; iso.timeZone = .current
-        if let date = iso.date(from: text) { return date }
-        throw AgentError.usage("could not read the date \"\(text)\". Try today, tomorrow, fri, in 3 days, 5 nov, or 2026-11-05")
+    static func parseDue(_ text: String) throws -> (date: Date, hasTime: Bool) {
+        let parsed = DueDateParser.parse("x \(text)")
+        if let date = parsed.due { return (date, parsed.hasTime) }
+        throw AgentError.usage("could not read the date \"\(text)\". Try today, tomorrow at 3pm, fri, in 3 days, 5 nov, or 2026-11-05")
     }
 
     static func findTask(_ id: String, in model: AppModel) throws -> TaskItem {
@@ -389,7 +391,7 @@ extension TaskItem: AgentIdentified {
         var json: JSONObject = ["id": String(agentID.prefix(8)), "title": title, "notes": notes, "done": isDone,
                                 "someday": isSomeday, "doing": isDoing, "records": recordsSession, "column": boardColumn.rawValue,
                                 "priority": priority.title.lowercased(),
-                                "subtasks": checklist.map { ["title": $0.title, "done": $0.isDone] as JSONObject },
+                                "subtasks": subtasks.map { ["title": $0.title, "done": $0.isDone] as JSONObject }, "hasDueTime": hasDueTime,
                                 "createdAt": JSON.date(createdAt)]
         if let due { json["due"] = JSON.date(due) }
         if let project { json["project"] = project.name; json["projectId"] = String(project.agentID.prefix(8)) }

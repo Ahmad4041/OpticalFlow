@@ -256,18 +256,25 @@ enum SelfTest {
         check("S-041 no match is reported, nothing changes", reply.hasPrefix("No open task"), reply)
         check("S-041 orchestrators report install state", Orchestrator.builtin.isInstalled)
 
+        // S-044: dates and times in plain words.
+        guard let bank = model.addTask(title: "Call the bank tomorrow at 3pm", on: .list(.inbox)) else { return check("S-044 add", false) }
+        let threeTomorrow = Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: Calendar.current.date(byAdding: .day, value: 1, to: .now)!)!
+        check("S-044 'tomorrow at 3pm' leaves the title and sets date and time", bank.title == "Call the bank" && bank.hasDueTime && abs(bank.due!.timeIntervalSince(threeTomorrow)) < 60, "\(bank.title) \(String(describing: bank.due))")
+        check("S-044 a timed task shows in Upcoming", model.tasks(for: .list(.upcoming)).contains(bank))
+        model.delete(bank)
+
         // S-043: subtasks.
         guard let steps = model.addTask(title: "Ship the release", on: .list(.inbox)) else { return check("S-043 add", false) }
-        steps.checklist = Checklist.parse("Tag it; Build; Upload")
-        steps.checklist[0].isDone = true
+        steps.subtasks = Checklist.parse("Tag it; Build; Upload")
+        steps.subtasks[0].isDone = true
         model.save()
-        check("S-043 a task keeps its subtasks and progress", steps.checklist.count == 3 && Checklist.progress(steps.checklist) == (1, 3))
+        check("S-043 a task keeps its subtasks and progress", steps.subtasks.count == 3 && Checklist.progress(steps.subtasks) == (1, 3))
         reply = model.perform(VoiceIntent.parse("add a subtask to ship the release: write the notes"))
-        check("S-043 'add a subtask to X' appends one", steps.checklist.last?.title == "write the notes", reply)
-        steps.checklist[1].isDone = true
+        check("S-043 'add a subtask to X' appends one", steps.subtasks.last?.title == "write the notes", reply)
+        steps.subtasks[1].isDone = true
         model.save()
         let reopenedSteps = (try? context.fetch(FetchDescriptor<TaskItem>()))?.first { $0.title == "Ship the release" }
-        check("S-043 subtasks survive a fetch", reopenedSteps?.checklist.filter(\.isDone).count == 2)
+        check("S-043 subtasks survive a fetch", reopenedSteps?.subtasks.filter(\.isDone).count == 2)
         model.delete(steps)
         model.sidebar = .project(projectID)
         let picks = model.recorder.pickRequests

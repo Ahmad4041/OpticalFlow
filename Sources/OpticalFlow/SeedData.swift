@@ -41,7 +41,7 @@ enum SeedData {
         login.isDoing = true
         login.recordsSession = true
         login.priority = .high
-        login.checklist = [ChecklistItem(title: "Reproduce with a fresh profile", isDone: true),
+        login.subtasks = [ChecklistItem(title: "Reproduce with a fresh profile", isDone: true),
                            ChecklistItem(title: "Write the regression test"),
                            ChecklistItem(title: "Fix the redirect")]
         task("Write the chapter export", project: app, due: day(-1), age: 6)

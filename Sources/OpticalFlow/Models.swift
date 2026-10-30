@@ -50,8 +50,11 @@ final class TaskItem {
     var recordsSession: Bool = false
     /// Priority.rawValue; 0 is none.
     var priorityRaw: Int = 0
-    /// Subtasks, in order.
-    var checklist: [ChecklistItem] = []
+    /// Subtasks, in order. Optional in the store: rows from before this column exist have no value,
+    /// and SwiftData aborts decoding a missing array into a non-optional. Read `subtasks`.
+    var checklist: [ChecklistItem]?
+    /// When a clock time was given with the due date, views show it.
+    var hasDueTime: Bool = false
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?
@@ -61,6 +64,10 @@ final class TaskItem {
     }
 
     var isDone: Bool { completedAt != nil }
+    var subtasks: [ChecklistItem] {
+        get { checklist ?? [] }
+        set { checklist = newValue }
+    }
     var priority: Priority {
         get { Priority(rawValue: priorityRaw) ?? .none }
         set { priorityRaw = newValue.rawValue }
