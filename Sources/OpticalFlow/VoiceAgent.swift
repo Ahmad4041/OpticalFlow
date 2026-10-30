@@ -252,6 +252,8 @@ final class VoiceAgent {
         json["reply"] = reply
         json["orchestrator"] = orchestrator.rawValue
         json["hotkeyTaken"] = Hotkey.voiceTaken
+        json["steps"] = steps
+        json["handledLocally"] = handledLocally
         json["microphones"] = Microphone.devices().map(\.name)
         json["microphone"] = Microphone.active?.name ?? "system default"
         if let panel {
