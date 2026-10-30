@@ -22,7 +22,7 @@ enum Orchestrator: String, CaseIterable, Identifiable {
         switch self {
         case .builtin: "Understands add, complete, start, stop, priority, and notes. Anything else becomes a new task."
         case .claude: "Runs `claude -p` with only the opticalflow command allowed. It reads your tasks, adds, updates, and sets priority as you asked."
-        case .codex: "Runs `codex exec` in its workspace sandbox with the opticalflow command. It reads your tasks, adds, updates, and sets priority as you asked."
+        case .codex: "Runs `codex exec` in its workspace sandbox, with network on so it reaches the app. It reads your tasks, adds, updates, and sets priority as you asked."
         }
     }
 
@@ -50,7 +50,9 @@ enum Orchestrator: String, CaseIterable, Identifiable {
         case .builtin: []
         case .claude: ["-p", prompt, "--output-format", "text", "--allowedTools", "Bash(opticalflow:*)",
                        "--disallowedTools", "Edit,Write,NotebookEdit,WebFetch,WebSearch"]
-        case .codex: ["exec", "--skip-git-repo-check", "-s", "workspace-write", "-C", workdir, "--color", "never", prompt]
+        // The workspace sandbox blocks all network, which includes the app's socket; this lets the socket through.
+        case .codex: ["exec", "--skip-git-repo-check", "-s", "workspace-write", "-c", "sandbox_workspace_write.network_access=true",
+                      "-C", workdir, "--color", "never", prompt]
         }
     }
 }
