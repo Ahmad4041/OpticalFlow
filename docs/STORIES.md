@@ -374,6 +374,16 @@ Acceptance:
 UX: Detail has a Time switch next to the date; the CLI --due takes the same words.
 Status: done
 
+### S-045 Project names by voice
+As the user, I say "add buy pizza in Fordan" or "add a task to Fordan: order stickers" and the task lands in that project, even when the recognizer hears "for than".
+Screens: voice
+Depends: S-041
+Acceptance:
+- [unit] edit distance.
+- [self] project(matching:) finds a project within a couple of letters and rejects unrelated words; "in <project>" and "to <project>:" file the task there.
+UX: project names and recent task titles go to the recognizer as vocabulary; the AI prompt lists the projects.
+Status: done
+
 ### S-042 Hand a task to a sandboxed agent
 As the user, I hand a task with its notes to an agent that works on it in a sandbox for the long run, and see its progress and result on the card.
 Screens: board

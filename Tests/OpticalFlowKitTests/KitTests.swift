@@ -151,6 +151,12 @@ func cleans(_ input: String, expected: String?) {
     #expect(BoardColumn.column(someday: true, doing: true, done: true) == .done)
 }
 
+@Test func editDistance() {
+    #expect(TaskTitle.distance("fordan", "forthan") == 2)
+    #expect(TaskTitle.distance("stream", "stream") == 0)
+    #expect(TaskTitle.distance("", "abc") == 3)
+}
+
 @Test func priorities() {
     #expect(Priority.parse("urgent") == .high && Priority.parse("P2") == .medium && Priority.parse("low") == .low)
     #expect(Priority.parse("none") == Priority.none && Priority.parse("later") == nil)

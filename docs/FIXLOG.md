@@ -77,3 +77,8 @@ Rule: when audio is silent, measure the input level before blaming permissions, 
 Cause: the new `checklist` column was a non-optional Codable array. Rows from before the column had no value, and SwiftData asserts when it decodes a missing value into a non-optional array (scalars get their default; arrays do not).
 Fix: the stored property is optional; `subtasks` reads it as an empty list. Verified by nulling the column in a test store and reading the task.
 Rule: A new Codable or array attribute on a @Model is optional with a computed non-optional accessor. Only scalars get a default on migration.
+
+## 2026-10-31 Sessions page crashed after a task was deleted
+Cause: `Session.task` had no inverse, so deleting a task left sessions pointing at a row that no longer existed; reading `task?.isDone` in the list asserted inside SwiftData.
+Fix: `TaskItem.sessions` is the inverse with nullify; `delete(task)` also clears the pointer by hand; `repairDanglingSessions()` fixes stores from before, once at launch.
+Rule: Every optional relationship on a @Model declares its inverse and delete rule. Then verify the delete path in the self-test by reading the other side afterwards.

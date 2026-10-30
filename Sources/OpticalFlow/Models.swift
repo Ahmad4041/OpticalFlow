@@ -58,6 +58,8 @@ final class TaskItem {
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?
+    /// Inverse of Session.task, so deleting a task clears its sessions' pointer instead of leaving a dead one.
+    @Relationship(deleteRule: .nullify, inverse: \Session.task) var sessions: [Session] = []
 
     init(title: String) {
         self.title = title

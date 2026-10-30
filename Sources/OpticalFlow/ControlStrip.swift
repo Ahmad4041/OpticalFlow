@@ -36,8 +36,7 @@ final class ControlStrip: NSObject, NSTouchBarDelegate {
         }
         available = true
 
-        let button = NSButton(title: "", image: NSImage(systemSymbolName: "timer", accessibilityDescription: "OpticalFlow")!,
-                              target: self, action: #selector(tapped))
+        let button = NSButton(title: "", image: Self.glyph, target: self, action: #selector(tapped))
         button.imagePosition = .imageLeading
         button.bezelStyle = .rounded
         let item = NSCustomTouchBarItem(identifier: identifier)
@@ -65,12 +64,27 @@ final class ControlStrip: NSObject, NSTouchBarDelegate {
         button = nil
     }
 
-    /// The strip button: the countdown while a session runs, a red dot while recording, else just the icon.
+    /// The app's mark, a ring with a dot, as a template image so the Touch Bar tints it.
+    static let glyph: NSImage = {
+        let size = NSSize(width: 22, height: 22)
+        let image = NSImage(size: size, flipped: false) { rect in
+            let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 3, dy: 3))
+            ring.lineWidth = 2.2
+            NSColor.black.setStroke()
+            ring.stroke()
+            NSBezierPath(ovalIn: rect.insetBy(dx: 8, dy: 8)).fill()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "OpticalFlow"
+        return image
+    }()
+
+    /// The strip button: the mark, with the countdown while a session runs; red while recording.
     private func refresh() {
         guard let model, let button else { return }
         let recording = model.recorder.isRecording
-        let name = recording ? "record.circle.fill" : (model.session != nil ? "timer" : "play.fill")
-        button.image = NSImage(systemSymbolName: name, accessibilityDescription: "OpticalFlow")
+        button.image = Self.glyph
         button.contentTintColor = recording ? .systemRed : nil
         button.title = model.clockLabel.map { " " + $0 } ?? (model.breakUntil != nil ? " " + Countdown.clock(model.breakRemaining) : "")
         label?.stringValue = status

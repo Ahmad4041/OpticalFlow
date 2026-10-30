@@ -115,8 +115,22 @@ final class AppModel {
         if session?.task == task { stopSession() }
         if selection == task.id { selection = nil }
         undoCompleted.removeAll { $0 == task }
+        for session in task.sessions { session.task = nil }   // keep the time record, drop the pointer
         context.delete(task)
         save()
+    }
+
+    /// Sessions whose task row no longer exists (from before the inverse relationship) lose the dead pointer,
+    /// which otherwise aborts the first view that reads it. Runs once at launch.
+    func repairDanglingSessions() {
+        let sessions = (try? context.fetch(FetchDescriptor<Session>())) ?? []
+        var repaired = 0
+        for session in sessions {
+            guard let id = session.task?.persistentModelID else { continue }
+            let count = (try? context.fetchCount(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.persistentModelID == id }))) ?? 1
+            if count == 0 { session.task = nil; repaired += 1 }
+        }
+        if repaired > 0 { save() }
     }
 
     func deleteSession(_ session: Session) {
@@ -274,6 +288,50 @@ final class AppModel {
         return best.flatMap { score($0) >= 10 ? $0 : nil }
     }
 
+    /// Titles of open tasks, newest first, for the speech recognizer's vocabulary.
+    func recentTitles(limit: Int) -> [String] {
+        var descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.completedAt == nil }, sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        descriptor.fetchLimit = limit
+        return ((try? context.fetch(descriptor)) ?? []).map(\.title)
+    }
+
+    /// The project whose name sounds like `text`: exact, contained, or within a couple of letters,
+    /// so "for than" still finds "Fordan".
+    func project(matching text: String) -> Project? {
+        func key(_ s: String) -> String { String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }) }
+        let wanted = key(text)
+        guard !wanted.isEmpty else { return nil }
+        let scored = projects.map { project -> (Project, Int) in
+            let name = key(project.name)
+            if name == wanted { return (project, 0) }
+            if name.contains(wanted) || wanted.contains(name) { return (project, 1) }
+            return (project, TaskTitle.distance(name, wanted))
+        }
+        guard let best = scored.min(by: { $0.1 < $1.1 }) else { return nil }
+        return best.1 <= max(1, key(best.0.name).count / 3) ? best.0 : nil
+    }
+
+    /// Splits "buy pizza in Fordan" or "to Fordan: buy pizza" into the title and its project.
+    func splitProject(from title: String) -> (title: String, project: Project?) {
+        let joiners = "(?:in|into|to|under|for|on|inside)"
+        // 1: "buy pizza in Fordan"  2: "to Fordan: buy pizza"  3: "Fordan: buy pizza" (the intent rule ate the "to")
+        let patterns = [
+            #"^(.+?)\s+\#(joiners)\s+(?:the\s+)?(?:project\s+)?(.+?)(?:\s+project)?$"#,
+            #"^\#(joiners)\s+(?:the\s+)?(?:project\s+)?(.+?)(?:\s+project)?[:,]\s*(.+)$"#,
+            #"^(?:the\s+)?(?:project\s+)?([^:,]+?)(?:\s+project)?[:,]\s*(.+)$"#,
+        ]
+        for (index, pattern) in patterns.enumerated() {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                  let m = regex.firstMatch(in: title, range: NSRange(title.startIndex..., in: title)),
+                  let a = Range(m.range(at: 1), in: title), let b = Range(m.range(at: 2), in: title) else { continue }
+            let (rest, name) = index == 0 ? (String(title[a]), String(title[b])) : (String(title[b]), String(title[a]))
+            if let project = project(matching: name), !rest.trimmingCharacters(in: .whitespaces).isEmpty {
+                return (rest.trimmingCharacters(in: .whitespaces), project)
+            }
+        }
+        return (title, nil)
+    }
+
     /// Runs one built-in voice intent and returns what to say back.
     func perform(_ intent: VoiceIntent) -> String {
         func found(_ match: String) -> TaskItem? {
@@ -283,8 +341,10 @@ final class AppModel {
         }
         switch intent {
         case .add(let title):
-            guard let task = addTask(title: title, on: .list(.inbox)) else { return "Nothing to add." }
-            return "Added “\(task.title)” to Inbox" + (task.due.map { ", due \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "") + "."
+            let split = splitProject(from: title)
+            guard let task = addTask(title: split.title, on: split.project.map { .project($0.uuid) } ?? .list(.inbox)) else { return "Nothing to add." }
+            let when = task.due.map { ", due " + (task.hasDueTime ? $0.formatted(date: .abbreviated, time: .shortened) : $0.formatted(date: .abbreviated, time: .omitted)) } ?? ""
+            return "Added “\(task.title)” to \(split.project?.name ?? "Inbox")\(when)."
         case .complete(let match):
             guard let task = found(match) else { return "No open task matches “\(match)”." }
             complete(task)

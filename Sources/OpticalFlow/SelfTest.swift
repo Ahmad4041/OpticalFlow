@@ -263,6 +263,30 @@ enum SelfTest {
         check("S-044 a timed task shows in Upcoming", model.tasks(for: .list(.upcoming)).contains(bank))
         model.delete(bank)
 
+        // S-045: spoken project names, even misheard.
+        model.projectPrompt = .new
+        model.commitProjectPrompt(name: "Fordan")
+        guard let fordan = model.projects.first(where: { $0.name == "Fordan" }) else { return check("S-045 project", false) }
+        check("S-045 'for than' finds Fordan", model.project(matching: "for than") == fordan)
+        check("S-045 an unrelated word finds nothing", model.project(matching: "groceries") == nil)
+        var spoken = model.perform(VoiceIntent.parse("add a task buy pizza in for than"))
+        check("S-045 'add X in <project>' files it there", model.tasks(for: .project(fordan.uuid)).contains { $0.title == "buy pizza" }, spoken)
+        spoken = model.perform(VoiceIntent.parse("add a task to Fordan: order the stickers tomorrow"))
+        check("S-045 'add a task to <project>: X' files it with its date", model.tasks(for: .project(fordan.uuid)).contains { $0.title == "order the stickers" && $0.due != nil }, spoken)
+        model.sidebar = .list(.inbox)
+        model.deleteProject(fordan)
+
+        // S-046: deleting a task keeps its sessions, without a dead pointer.
+        guard let doomed = model.addTask(title: "Doomed", on: .list(.inbox)) else { return check("S-046 add", false) }
+        model.startSession(on: doomed)
+        model.stopSession()
+        let doomedSessions = (try? context.fetch(FetchDescriptor<Session>()))?.filter { $0.task == doomed } ?? []
+        check("S-046 the session points at the task", doomedSessions.count == 1)
+        model.delete(doomed)
+        check("S-046 after delete the session has no task and reads safely", doomedSessions.first.map { $0.task == nil && ($0.task?.isDone ?? false) == false } == true)
+        model.repairDanglingSessions()
+        check("S-046 repair runs clean", true)
+
         // S-043: subtasks.
         guard let steps = model.addTask(title: "Ship the release", on: .list(.inbox)) else { return check("S-043 add", false) }
         steps.subtasks = Checklist.parse("Tag it; Build; Upload")

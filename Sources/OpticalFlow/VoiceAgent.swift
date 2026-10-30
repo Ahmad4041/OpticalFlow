@@ -159,6 +159,8 @@ final class VoiceAgent {
         }
         nonisolated(unsafe) let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
+        // Project names and task words are rarely dictionary words; this teaches the recognizer them.
+        request.contextualStrings = model.projects.map(\.name) + model.recentTitles(limit: 60)
         // On this Mac the on-device model may be missing even when supported; the server path still works.
         request.requiresOnDeviceRecognition = false
         request.addsPunctuation = true
@@ -336,7 +338,8 @@ final class VoiceAgent {
     }
 
     private func prompt(for text: String) -> String {
-        var context = "Open page: \(model.sidebar?.title ?? "none")."
+        var context = "Open page: \(model.sidebar?.title ?? "none"). Projects: \(model.projects.map(\.name).joined(separator: ", ")). " +
+            "Spoken project or task names may be misheard; match them to the closest real name."
         if let task = model.selectedTask { context += " Selected task: “\(task.title)” (id \(task.agentID.prefix(8)))." }
         return """
         You control the OpticalFlow task app on this Mac through the `opticalflow` command (run `opticalflow help` for the list; always add --json). \
