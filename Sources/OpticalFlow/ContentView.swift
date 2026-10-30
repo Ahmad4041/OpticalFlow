@@ -39,6 +39,7 @@ struct ContentView: View {
             }
         }
         .toolbar { sessionToolbar }
+        .touchBar { TouchBarStrip() }
         .alert(promptTitle, isPresented: Binding(get: { model.projectPrompt != nil },
                                                   set: { if !$0 { model.projectPrompt = nil } })) {
             TextField("Name", text: $projectName)
@@ -225,5 +226,42 @@ struct ViewModeToolbar: ToolbarContent {
             .labelsHidden()
             .help("List or board (Command-Option-B)")
         }
+    }
+}
+
+/// The Touch Bar while the window is in front: timer, Pause, Stop, Record, Voice, and Complete or Start.
+struct TouchBarStrip: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        if let session = model.session {
+            Text((model.clockLabel ?? "") + "  " + (session.task?.title ?? ""))
+                .monospacedDigit()
+                .lineLimit(1)
+                .frame(maxWidth: 240)
+                .touchBarItemPrincipal()
+            Button(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill") {
+                if model.paused { model.resume() } else { model.pause() }
+            }
+            Button("Stop", systemImage: "stop.fill") { model.stopSession() }
+            if let task = session.task, !task.isDone {
+                Button("Done", systemImage: "checkmark") { model.complete(task); model.stopSession() }
+            }
+        } else if model.breakUntil != nil {
+            Text("Break " + Countdown.clock(model.breakRemaining)).monospacedDigit().touchBarItemPrincipal()
+            Button("End Break", systemImage: "xmark") { model.endBreak() }
+        } else {
+            if let next = model.upNext {
+                Button("Start: \(next.title)", systemImage: "play.fill") { model.startSession(on: next) }
+                    .touchBarItemPrincipal()
+            }
+            if let task = model.selectedTask, !task.isDone {
+                Button("Complete", systemImage: "checkmark") { model.complete(task) }
+            }
+        }
+        Button(model.recorder.isRecording ? "Stop Recording" : "Record",
+               systemImage: model.recorder.isRecording ? "stop.circle.fill" : "record.circle") { model.toggleRecording() }
+            .foregroundStyle(.red)
+        Button("Voice", systemImage: "mic.fill") { model.voice.toggle() }
     }
 }
