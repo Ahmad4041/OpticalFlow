@@ -69,6 +69,10 @@ final class VoiceAgent {
     var error: String?
     var listening = false
     var busy = false
+    /// Off while a CLI probe listens, so nothing acts on noise.
+    var autoSend = true
+    /// What the last listen found, for `opticalflow agent diagnose`.
+    private(set) var diagnostics: [String: String] = [:]
 
     private let model: AppModel
     private var panel: NSPanel?
@@ -95,6 +99,7 @@ final class VoiceAgent {
     }
 
     func show(listening: Bool) {
+        autoSend = true
         let panel = self.panel ?? makePanel()
         self.panel = panel
         transcript = ""
@@ -118,48 +123,89 @@ final class VoiceAgent {
 
     // MARK: Speech
 
-    private func startListening() async {
-        let speech = await withCheckedContinuation { cont in SFSpeechRecognizer.requestAuthorization { cont.resume(returning: $0) } }
+    func startListening() async {
+        diagnostics = ["locale": Locale.current.identifier]
+        // These three callbacks arrive on background queues; @Sendable keeps them off the main actor (the app's default).
+        let speech = await withCheckedContinuation { cont in
+            SFSpeechRecognizer.requestAuthorization { @Sendable status in cont.resume(returning: status) }
+        }
+        diagnostics["speechAuthorization"] = "\(speech.rawValue)"
         guard speech == .authorized else {
-            error = "Allow Speech Recognition for OpticalFlow in System Settings > Privacy & Security. You can type instead."
+            error = "Allow Speech Recognition for OpticalFlow in System Settings > Privacy & Security > Speech Recognition. You can type instead."
             return
         }
-        guard await AVCaptureDevice.requestAccess(for: .audio) else {
-            error = "Allow the microphone for OpticalFlow in System Settings > Privacy & Security. You can type instead."
+        let mic = await AVCaptureDevice.requestAccess(for: .audio)
+        diagnostics["microphone"] = "\(mic)"
+        guard mic else {
+            error = "Allow the microphone for OpticalFlow in System Settings > Privacy & Security > Microphone. You can type instead."
             return
         }
-        guard let recognizer = SFSpeechRecognizer(locale: .current) ?? SFSpeechRecognizer(), recognizer.isAvailable else {
-            error = "Speech recognition is not available for your language right now. You can type instead."
+        guard let recognizer = SFSpeechRecognizer(locale: .current) ?? SFSpeechRecognizer() else {
+            error = "No speech recognizer for \(Locale.current.identifier). You can type instead."
+            return
+        }
+        diagnostics["available"] = "\(recognizer.isAvailable)"
+        diagnostics["onDevice"] = "\(recognizer.supportsOnDeviceRecognition)"
+        guard recognizer.isAvailable else {
+            error = "Speech recognition is off. Turn on Dictation in System Settings > Keyboard, or check the network. You can type instead."
             return
         }
         nonisolated(unsafe) let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
+        // On this Mac the on-device model may be missing even when supported; the server path still works.
+        request.requiresOnDeviceRecognition = false
         request.addsPunctuation = true
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
+        diagnostics["inputFormat"] = "\(Int(format.sampleRate)) Hz, \(format.channelCount) ch"
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            error = "No microphone input device. Pick one in System Settings > Sound > Input. You can type instead."
+            return
+        }
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in request.append(buffer) }
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { @Sendable buffer, _ in request.append(buffer) }
         engine.prepare()
         do { try engine.start() } catch {
             self.error = "No microphone input: \(error.localizedDescription)"
+            diagnostics["engine"] = error.localizedDescription
             return
         }
         listening = true
-        recognition = recognizer.recognitionTask(with: request) { [weak self] result, error in
+        recognition = recognizer.recognitionTask(with: request) { @Sendable [weak self] result, error in
             let text = result?.bestTranscription.formattedString
             let final = result?.isFinal ?? false
-            let failed = error != nil && result == nil
+            let failure = (error as NSError?).map { (code: $0.code, text: "\($0.domain) \($0.code): \($0.localizedDescription)") }
             Task { @MainActor [weak self] in
-                guard let self, self.listening else { return }
+                guard let self else { return }
                 if let text, !text.isEmpty {
                     self.transcript = text
-                    self.restartSilenceTimer()
+                    self.diagnostics["transcript"] = text
+                    if self.listening, self.autoSend { self.restartSilenceTimer() }
                 }
-                if final { self.send(self.transcript) }
-                if failed { self.stopListening() }
+                if let failure {
+                    self.diagnostics["recognizerError"] = failure.text
+                    // 216 is the cancel we cause by finishing; 1110 is "no speech" after silence.
+                    if self.listening, failure.code != 216, failure.code != 1110 {
+                        self.error = "Speech recognition failed: \(failure.text). You can type instead."
+                    }
+                    self.stopListening()
+                    return
+                }
+                if final, self.listening, self.autoSend { self.send(self.transcript) }
             }
         }
+    }
+
+    /// For the CLI: what the last listen saw.
+    var state: [String: Any] {
+        var json: [String: Any] = diagnostics
+        json["listening"] = listening
+        json["busy"] = busy
+        json["transcript"] = transcript
+        json["reply"] = reply
+        json["orchestrator"] = orchestrator.rawValue
+        if let error { json["error"] = error }
+        return json
     }
 
     /// Sends after a pause in speech, so nobody has to press Return.
@@ -172,7 +218,7 @@ final class VoiceAgent {
         }
     }
 
-    private func stopListening() {
+    func stopListening() {
         silence?.cancel()
         silence = nil
         guard listening else { return }

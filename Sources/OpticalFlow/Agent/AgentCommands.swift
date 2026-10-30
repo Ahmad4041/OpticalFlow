@@ -251,6 +251,25 @@ enum AgentCommands {
             return ["sentTo": model.voice.orchestrator.title, "reply": "pending; see the voice panel"]
         },
 
+        AgentCommand(name: "agent listen", summary: "Open the voice panel and listen. With --probe nothing is sent; read the result with agent state.",
+                     params: [.init(name: "probe", kind: .boolean, help: "listen without acting, for diagnosis")],
+                     example: "opticalflow agent listen --probe --json") { args, model in
+            let probe = try args.bool("probe") == true
+            model.voice.show(listening: false)
+            model.voice.autoSend = !probe
+            Task { await model.voice.startListening() }
+            return ["listening": true, "probe": probe]
+        },
+        AgentCommand(name: "agent state", summary: "Permissions, availability, transcript, and errors of the voice agent.",
+                     example: "opticalflow agent state --json", readOnly: true) { _, model in
+            model.voice.state
+        },
+        AgentCommand(name: "agent close", summary: "Stop listening and close the voice panel.",
+                     example: "opticalflow agent close --json") { _, model in
+            model.voice.close()
+            return ["closed": true]
+        },
+
         // MARK: Window
         AgentCommand(name: "open", summary: "Show a page in the window.",
                      params: [.init(name: "page", required: true, positional: true, help: pages),
