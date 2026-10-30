@@ -12,7 +12,7 @@ Two targets, one direction of dependency: `OpticalFlow` (app) depends on `Optica
 - `AppModel`: the one observable store. Tasks and projects, the session (owns a `SessionClock`, a 1 s ticker, idle and break state), export entry points, URL commands. Owns `Recorder`, `QuickEntry`, `MiniTimer`.
 - `Recorder`: ScreenCaptureKit stream + `SCRecordingOutput`, `CameraRecorder` (sidecar + `CameraBubble`), pointer tracking, display following. Callbacks `onStart`/`onStop` create and finish `Recording` rows.
 - `Exporter` + `StudioCompositor`: trim, camera overlay, blur, follow-cursor zoom, YouTube preset. `nonisolated`, runs on AVFoundation's queues.
-- Views: `ContentView` (split view, toolbar, task and session pages), `RecordingViews`, `MenuBarPanel`, `MiniTimer`, `QuickEntry`, `SettingsView`.
+- Views: `ContentView` (split view, sidebar, toolbar), `TaskViews`, `SessionViews`, `RecordingViews`, `MenuBarPanel`, `MiniTimer`, `QuickEntry`, `SettingsView`.
 - Agent hooks: `SeedData`, `SelfTest`, `Snapshot`, all gated on `APP_STORE` in /tmp.
 
 ## Seams

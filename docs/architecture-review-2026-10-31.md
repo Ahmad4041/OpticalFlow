@@ -9,7 +9,7 @@ Problem: elapsed, pause, resume, overflow, and idle banking were spread over `pa
 Proposal: `SessionClock { planned, banked, resumedAt; elapsed(at:), pause(at:), resume(at:), stop(at:) }` in the Kit.
 Proof: the self-test's S-005/S-006/S-014/S-015 checks before and after (83 both), plus a unit test for the clock.
 
-## Task views out of ContentView  [Worth exploring]
+## Task views out of ContentView  [Worth exploring]  — done 2026-10-31
 Files: ContentView.swift (434 lines: Sidebar, TaskList, TaskRow, TaskDetail, SessionList, RecordingOptionsMenu).
 Signal: file over 400 lines, touched by 13 commits.
 Proposal: `TaskViews.swift` (TaskList, TaskRow, TaskDetail) and `SessionViews.swift`; ContentView keeps the split view and toolbar. Pure move.
