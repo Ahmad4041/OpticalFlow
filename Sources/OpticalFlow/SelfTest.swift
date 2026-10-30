@@ -284,8 +284,6 @@ enum SelfTest {
         check("S-046 the session points at the task", doomedSessions.count == 1)
         model.delete(doomed)
         check("S-046 after delete the session has no task and reads safely", doomedSessions.first.map { $0.task == nil && ($0.task?.isDone ?? false) == false } == true)
-        model.repairDanglingSessions()
-        check("S-046 repair runs clean", true)
 
         // S-043: subtasks.
         guard let steps = model.addTask(title: "Ship the release", on: .list(.inbox)) else { return check("S-043 add", false) }

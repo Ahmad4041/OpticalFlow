@@ -1,4 +1,5 @@
 import AppKit
+import SQLite3
 import SwiftData
 import SwiftUI
 import UserNotifications
@@ -192,11 +193,23 @@ enum Store {
     }
 
     static func makeContainer() -> ModelContainer {
+        repair(url)
         do {
             return try ModelContainer(for: Project.self, TaskItem.self, Session.self, Recording.self,
                                       configurations: ModelConfiguration(url: url))
         } catch {
             fatalError("Could not open the database at \(url.path): \(error)")
         }
+    }
+
+    /// Sessions from before `TaskItem.sessions` existed can point at a task row that was deleted.
+    /// SwiftData aborts both reading and clearing such a pointer, so this clears it in SQL before the
+    /// container opens. A missing table (a fresh store) is a no-op.
+    static func repair(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else { return }
+        defer { sqlite3_close(db) }
+        sqlite3_exec(db, "UPDATE ZSESSION SET ZTASK = NULL WHERE ZTASK IS NOT NULL AND ZTASK NOT IN (SELECT Z_PK FROM ZTASKITEM);", nil, nil, nil)
     }
 }

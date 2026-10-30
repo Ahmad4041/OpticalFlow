@@ -120,18 +120,6 @@ final class AppModel {
         save()
     }
 
-    /// Sessions whose task row no longer exists (from before the inverse relationship) lose the dead pointer,
-    /// which otherwise aborts the first view that reads it. Runs once at launch.
-    func repairDanglingSessions() {
-        let sessions = (try? context.fetch(FetchDescriptor<Session>())) ?? []
-        var repaired = 0
-        for session in sessions {
-            guard let id = session.task?.persistentModelID else { continue }
-            let count = (try? context.fetchCount(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.persistentModelID == id }))) ?? 1
-            if count == 0 { session.task = nil; repaired += 1 }
-        }
-        if repaired > 0 { save() }
-    }
 
     func deleteSession(_ session: Session) {
         if session == self.session { stopSession() }

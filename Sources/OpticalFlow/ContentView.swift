@@ -57,7 +57,6 @@ struct ContentView: View {
             guard !bootstrapped else { return }
             bootstrapped = true
             AgentRouter.model = model
-            model.repairDanglingSessions()
             AgentSocket.listen { AgentRouter.handle($0) }
             SeedData.insertIfRequested(into: model)
             SelfTest.runIfRequested(model: model)
