@@ -105,6 +105,11 @@ struct Sidebar: View {
                 ForEach(Page.fixed, id: \.self) { page in
                     Label(page.title, systemImage: page.symbol)
                         .tag(page)
+                        .dropDestination(for: String.self) { ids, _ in
+                            guard page.showsTasks else { return false }
+                            model.move(ids, to: page)
+                            return true
+                        }
                 }
             }
             Section("Projects") {
@@ -121,8 +126,17 @@ struct Sidebar: View {
                         Image(systemName: "circle.fill").foregroundStyle(project.color)
                     }
                     .tag(Page.project(project.uuid))
+                    .dropDestination(for: String.self) { ids, _ in
+                        model.move(ids, to: .project(project.uuid))
+                        return true
+                    }
                     .contextMenu {
+                        Button("New Task in \(project.name)") {
+                            model.sidebar = .project(project.uuid)
+                            model.draftTitle = ""
+                        }
                         Button("Rename…") { model.projectPrompt = .rename(project) }
+                        Divider()
                         Button("Delete", role: .destructive) { model.deleteProject(project) }
                     }
                 }
@@ -176,9 +190,21 @@ struct TaskList: View {
     private func row(_ task: TaskItem) -> some View {
         TaskRow(task: task, showProject: !isProjectPage || searching)
             .tag(task.id)
+            .draggable(task.uuid.uuidString)
             .contextMenu {
                 Button("Complete") { model.complete(task) }
                 Button("Start Session") { model.startSession(on: task) }
+                Divider()
+                Button("Due Today") { model.move([task.uuid.uuidString], to: .list(.today)) }
+                Button("Due Tomorrow") { model.move([task.uuid.uuidString], to: .list(.upcoming)) }
+                Button("Someday") { model.move([task.uuid.uuidString], to: .list(.someday)) }
+                Button("Clear Due Date") { task.due = nil; model.save() }.disabled(task.due == nil)
+                Menu("Move to Project") {
+                    Button("None") { model.move([task.uuid.uuidString], to: .list(.inbox)) }
+                    ForEach(projects) { project in
+                        Button(project.name) { model.move([task.uuid.uuidString], to: .project(project.uuid)) }
+                    }
+                }
                 Divider()
                 Button("Delete", role: .destructive) {
                     context.delete(task)
@@ -228,8 +254,8 @@ struct TaskList: View {
                 if searching {
                     ContentUnavailableView.search(text: model.search)
                 } else {
-                    ContentUnavailableView("No Tasks", systemImage: page.symbol,
-                                           description: Text("Press Command-N to add one."))
+                    ContentUnavailableView(page.emptyState.title, systemImage: page.symbol,
+                                           description: Text(page.emptyState.hint))
                 }
             }
         }

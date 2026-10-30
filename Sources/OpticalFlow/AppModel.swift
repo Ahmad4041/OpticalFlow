@@ -170,6 +170,26 @@ final class AppModel {
         return true
     }
 
+    /// Drop or "Move to": tasks by uuid string onto a page. Inbox clears project and Someday; Today and
+    /// Upcoming set the date; Someday flags it and clears the date; a project assigns it.
+    func move(_ ids: [String], to page: Page) {
+        let uuids = Set(ids.compactMap(UUID.init(uuidString:)))
+        let all = (try? context.fetch(FetchDescriptor<TaskItem>())) ?? []
+        for task in all where uuids.contains(task.uuid) {
+            switch page {
+            case .list(.inbox): task.project = nil; task.isSomeday = false
+            case .list(.today): task.due = .now; task.isSomeday = false
+            case .list(.upcoming):
+                if !task.isIn(.upcoming, asOpen: true) { task.due = Calendar.current.date(byAdding: .day, value: 1, to: .now) }
+                task.isSomeday = false
+            case .list(.someday): task.isSomeday = true; task.due = nil
+            case .project(let id): task.project = project(id)
+            default: break
+            }
+        }
+        save()
+    }
+
     func setDue(_ date: Date?) {
         selectedTask?.due = date
         save()
@@ -351,15 +371,16 @@ final class AppModel {
 
     /// Writes "<name> <start> to <end>[ with camera].mp4" next to the recording and returns its row, chapters shifted.
     /// With the camera, the sidecar is laid over the bottom-right corner and the file is re-encoded.
-    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval, withCamera: Bool = false, followCursor: Bool = false) async throws -> Recording {
+    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval, withCamera: Bool = false, followCursor: Bool = false, youtube: Bool = false) async throws -> Recording {
         let stem = recording.url.deletingPathExtension().lastPathComponent
         let camera = withCamera && recording.hasCamera ? recording.cameraURL : nil
         let cursor = followCursor ? recording.cursorTrack : nil
         var suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
         if camera != nil { suffix += " with camera" }
         if cursor != nil { suffix += " zoomed" }
+        if youtube { suffix += " youtube" }
         let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(suffix).mp4")
-        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, layout: recorder.cameraLayout, cursor: cursor, start: start, end: end, to: output)
+        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, layout: recorder.cameraLayout, cursor: cursor, youtube: youtube, start: start, end: end, to: output)
         let new = Recording(url: output, session: recording.session)
         new.startedAt = recording.startedAt.addingTimeInterval(start)
         new.duration = end - start
