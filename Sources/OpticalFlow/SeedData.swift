@@ -38,9 +38,11 @@ enum SeedData {
         task("Order a second SSD for recordings", notes: "2 TB, NVMe, for the Thunderbolt dock.", age: 8)
         let login = task("Fix the login redirect loop", project: app, due: .now,
                          notes: "Repro: sign out, open /settings, sign in. Lands on / instead of /settings.", age: 7)
+        login.isDoing = true
+        login.recordsSession = true
         task("Write the chapter export", project: app, due: day(-1), age: 6)
         let walkthrough = task("Record the SwiftData walkthrough", project: stream, due: .now, done: true, age: 5)
-        task("Set up the OBS scene for the Mac stream", project: stream, due: day(2), age: 4)
+        task("Set up the OBS scene for the Mac stream", project: stream, due: day(2), age: 4).recordsSession = true
         task("Try the new ScreenCaptureKit picker API", project: app, due: day(5), age: 3)
         task("Publish the session recording", project: stream, due: day(1), age: 3)
         task("Write show notes for the stream", project: stream, due: day(2), age: 3)

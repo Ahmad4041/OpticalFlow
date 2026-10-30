@@ -44,6 +44,10 @@ final class TaskItem {
     var due: Date?
     var completedAt: Date?
     var isSomeday: Bool = false
+    /// On the board's Doing column. Set when a session starts on it.
+    var isDoing: Bool = false
+    /// Starting a session on this task opens the screen recorder too.
+    var recordsSession: Bool = false
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?
@@ -53,6 +57,7 @@ final class TaskItem {
     }
 
     var isDone: Bool { completedAt != nil }
+    var boardColumn: BoardColumn { BoardColumn.column(someday: isSomeday, doing: isDoing, done: isDone) }
 
     /// `asOpen` evaluates the list rule as if the task were not done (a just-completed row that still shows).
     func isIn(_ list: SmartList, asOpen: Bool = false) -> Bool {

@@ -40,6 +40,16 @@ enum Snapshot {
                     capture(to: "\(dir)/\(page.snapshotName)-\(mode).png")
                 }
             }
+            if only == nil || only?.contains("board") == true, let project = model.projects.first {
+                model.sidebar = .project(project.uuid)
+                model.showsBoard = true
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/board-\(mode).png")
+                }
+                model.showsBoard = false
+            }
             if only == nil || only?.contains("quickentry") == true {
                 model.quickEntry.show()
                 try? await Task.sleep(for: .seconds(0.8))

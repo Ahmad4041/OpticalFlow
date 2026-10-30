@@ -129,3 +129,10 @@ func cleans(_ input: String, expected: String?) {
     #expect(clock.stop(at: t0.addingTimeInterval(1600)) == 1510)
     #expect(clock.isPaused && clock.elapsed(at: t0.addingTimeInterval(9999)) == 1510)
 }
+
+@Test func boardColumns() {
+    #expect(BoardColumn.column(someday: false, doing: false, done: false) == .todo)
+    #expect(BoardColumn.column(someday: true, doing: false, done: false) == .backlog)
+    #expect(BoardColumn.column(someday: true, doing: true, done: false) == .doing)
+    #expect(BoardColumn.column(someday: true, doing: true, done: true) == .done)
+}

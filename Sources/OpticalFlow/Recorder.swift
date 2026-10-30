@@ -73,8 +73,13 @@ final class Recorder {
             : URL.moviesDirectory.appending(path: "OpticalFlow", directoryHint: .isDirectory)
     }
 
+    /// How many times the picker was asked for. Test runs count but never show the system picker.
+    private(set) var pickRequests = 0
+
     func pick() {
         guard !isRecording, !starting else { return }
+        pickRequests += 1
+        if Store.isOverridden { return }
         lastError = nil
         var config = SCContentSharingPickerConfiguration()
         config.allowedPickerModes = [.singleDisplay, .singleWindow]

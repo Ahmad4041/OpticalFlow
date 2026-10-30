@@ -83,6 +83,8 @@ struct OpticalFlowApp: App {
                     .keyboardShortcut("m", modifiers: [.command, .option])
             }
             CommandGroup(after: .sidebar) {
+                Button(model.showsBoard ? "Show as List" : "Show as Board") { model.showsBoard.toggle() }
+                    .keyboardShortcut("b", modifiers: [.command, .option])
                 Divider()
                 ForEach(Array(Page.fixed.enumerated()), id: \.offset) { index, page in
                     Button(page.title) { model.sidebar = page }

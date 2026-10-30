@@ -203,6 +203,29 @@ enum SelfTest {
         check("S-023 dropping on a project assigns it", task.project == project)
         check("S-025 each page has its own empty state", Page.list(.inbox).emptyState.title != Page.list(.today).emptyState.title)
 
+        // S-034 / S-035
+        model.move([task.uuid.uuidString], toColumn: .doing)
+        check("S-034 Doing column sets the doing flag", task.boardColumn == .doing && task.isDoing)
+        model.move([task.uuid.uuidString], toColumn: .backlog)
+        check("S-034 Backlog column flags someday and clears doing", task.boardColumn == .backlog && task.isSomeday && !task.isDoing)
+        model.move([task.uuid.uuidString], toColumn: .done)
+        check("S-034 Done column completes", task.isDone)
+        model.move([task.uuid.uuidString], toColumn: .todo)
+        check("S-034 To Do column reopens", !task.isDone && !task.isSomeday && task.boardColumn == .todo)
+        let picks = model.recorder.pickRequests
+        model.startSession(on: task)
+        check("S-035 a session puts the task in Doing", task.isDoing)
+        check("S-035 a task without the flag does not open the recorder", model.recorder.pickRequests == picks)
+        model.stopSession()
+        task.recordsSession = true
+        model.startSession(on: task)
+        check("S-035 a task with Record Sessions opens the recorder", model.recorder.pickRequests == picks + 1)
+        model.stopSession()
+        task.recordsSession = false
+        model.complete(task)
+        check("S-034 completing clears doing", !task.isDoing)
+        model.undoComplete()
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)

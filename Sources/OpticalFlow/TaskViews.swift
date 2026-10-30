@@ -36,6 +36,7 @@ struct TaskList: View {
             .contextMenu {
                 Button("Complete") { model.complete(task) }
                 Button("Start Session") { model.startSession(on: task) }
+                Toggle("Record Sessions", isOn: Binding(get: { task.recordsSession }, set: { task.recordsSession = $0; model.save() }))
                 Divider()
                 Button("Due Today") { model.move([task.uuid.uuidString], to: .list(.today)) }
                 Button("Due Tomorrow") { model.move([task.uuid.uuidString], to: .list(.upcoming)) }
@@ -104,6 +105,7 @@ struct TaskList: View {
         .searchable(text: $model.search, placement: .toolbar, prompt: "Search tasks")
         .navigationTitle(searching ? "Search" : title)
         .toolbar {
+            if isProjectPage { ViewModeToolbar() }
             ToolbarItem {
                 Button("New Task", systemImage: "plus") { model.draftTitle = "" }
                     .help("Add a task (Command-N)")
@@ -137,6 +139,12 @@ struct TaskRow: View {
                     .font(.callout)
                     .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
             }
+            if task.recordsSession {
+                Image(systemName: "record.circle")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .help("Sessions on this task record the screen")
+            }
             if showProject, let project = task.project {
                 Image(systemName: "circle.fill")
                     .font(.caption2)
@@ -167,6 +175,10 @@ struct TaskDetail: View {
                            displayedComponents: .date)
             }
             Toggle("Someday", isOn: $task.isSomeday)
+            Section("Sessions") {
+                Toggle("Record the screen during sessions", isOn: $task.recordsSession)
+                Toggle("Doing (on the board)", isOn: $task.isDoing)
+            }
             Section("Notes") {
                 TextEditor(text: $task.notes)
                     .frame(minHeight: 120)

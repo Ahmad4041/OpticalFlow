@@ -13,7 +13,7 @@ struct ContentView: View {
             Sidebar()
         } content: {
             ContentColumn()
-                .navigationSplitViewColumnWidth(min: 320, ideal: 400)
+                .navigationSplitViewColumnWidth(min: boardShown ? 760 : 320, ideal: boardShown ? 1_040 : 400)
         } detail: {
             DetailColumn()
         }
@@ -35,6 +35,11 @@ struct ContentView: View {
             SelfTest.runIfRequested(model: model)
             Snapshot.runIfRequested(model: model, openSettings: openSettings)
         }
+    }
+
+    private var boardShown: Bool {
+        if case .project = model.sidebar { return model.showsBoard }
+        return false
     }
 
     private var isRename: Bool {
@@ -156,6 +161,8 @@ struct ContentColumn: View {
         switch model.sidebar ?? .list(.inbox) {
         case .sessions: SessionList()
         case .recordings: RecordingList()
+        case .project(let id) where model.showsBoard:
+            if let project = model.project(id) { BoardView(project: project).navigationTitle(project.name).toolbar { ViewModeToolbar() } }
         case let page: TaskList(page: page)
         }
     }
@@ -172,6 +179,24 @@ struct DetailColumn: View {
         } else {
             ContentUnavailableView("No Selection", systemImage: "sidebar.right")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+/// List or Board, on project pages.
+struct ViewModeToolbar: ToolbarContent {
+    @Environment(AppModel.self) private var model
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            @Bindable var model = model
+            Picker("View", selection: $model.showsBoard) {
+                Label("List", systemImage: "list.bullet").tag(false)
+                Label("Board", systemImage: "rectangle.split.3x1").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .help("List or board (Command-Option-B)")
         }
     }
 }

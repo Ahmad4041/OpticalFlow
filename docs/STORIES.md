@@ -271,6 +271,29 @@ Acceptance:
 UX: Thumbnails come from AVAssetImageGenerator at one second in, cached for the app's run. A missing file shows a film symbol.
 Status: done
 
+## M8 Board and agents
+
+### S-034 Kanban board for a project
+As the user, I switch a project to Board and see Backlog, To Do, Doing, and Done columns, and drag cards between them.
+Screens: board
+Depends: S-003, S-023
+Acceptance:
+- [unit] BoardColumn.column: done wins, then doing, then someday, else to do.
+- [self] Dropping on Doing sets the flag; Backlog flags someday; Done completes; To Do reopens; completing clears doing.
+- [snap] Four 240 pt columns with cards: colour stripe, title, due, Records and Live badges; the Done column shows the last seven days.
+UX: List/Board segmented control in the toolbar of project pages, remembered; Command-Option-B toggles. Cards select on click so the detail follows. Columns are the project's own state, not a new field per column.
+Status: done
+
+### S-035 Record sessions per task
+As the user, I flag a task "Record the screen during sessions" and starting a session on it opens the recorder; a session also moves the task to Doing.
+Screens: today, board
+Depends: S-005, S-007
+Acceptance:
+- [self] Starting a session sets doing; without the flag the recorder is not asked; with the flag the picker is requested once.
+- [snap] A red record badge on the row and a "Records" badge on the card.
+UX: Toggle in the detail's Sessions section, the row's context menu, and the card's context menu. Nothing starts without the picker: the user still chooses what to capture.
+Status: done
+
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
 As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.

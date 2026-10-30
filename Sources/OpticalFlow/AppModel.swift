@@ -14,6 +14,10 @@ final class AppModel {
         didSet { hideDoneBefore = .now; selection = nil }
     }
     var selection: PersistentIdentifier?
+    /// Project pages show the board instead of the list.
+    var showsBoard = UserDefaults.standard.bool(forKey: "showsBoard") {
+        didSet { UserDefaults.standard.set(showsBoard, forKey: "showsBoard") }
+    }
     /// Command-F. Non-empty: every page shows matching open tasks instead of its own list.
     var search = ""
     /// Non-nil while the inline new-task row is open.
@@ -148,6 +152,7 @@ final class AppModel {
     func complete(_ task: TaskItem) {
         guard !task.isDone else { return }
         task.completedAt = .now
+        task.isDoing = false
         undoCompleted.append(task)
         if let recording = recorder.recording {
             recording.chapters.append(ChapterMark(title: task.title, offset: Date.now.timeIntervalSince(recording.startedAt)))
@@ -187,6 +192,21 @@ final class AppModel {
             case .list(.someday): task.isSomeday = true; task.due = nil
             case .project(let id): task.project = project(id)
             default: break
+            }
+        }
+        save()
+    }
+
+    /// A board drop. Backlog = someday; To Do = open; Doing = the doing flag; Done = completed.
+    func move(_ ids: [String], toColumn column: BoardColumn) {
+        let uuids = Set(ids.compactMap(UUID.init(uuidString:)))
+        let all = (try? context.fetch(FetchDescriptor<TaskItem>())) ?? []
+        for task in all where uuids.contains(task.uuid) {
+            switch column {
+            case .backlog: task.isSomeday = true; task.isDoing = false; task.completedAt = nil
+            case .todo: task.isSomeday = false; task.isDoing = false; task.completedAt = nil
+            case .doing: task.isSomeday = false; task.isDoing = true; task.completedAt = nil
+            case .done: if !task.isDone { complete(task) }
             }
         }
         save()
@@ -279,6 +299,8 @@ final class AppModel {
         let new = Session(task: task, plannedMinutes: plannedMinutes)
         context.insert(new)
         save()
+        task.isDoing = true
+        if task.recordsSession, !recorder.isRecording { recorder.pick() }
         session = new
         clock = SessionClock(planned: new.plannedMinutes * 60, startedAt: .now)
         notifiedDone = false
