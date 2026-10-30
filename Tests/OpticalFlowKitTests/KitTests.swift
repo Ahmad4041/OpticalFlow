@@ -116,3 +116,16 @@ func cleans(_ input: String, expected: String?) {
     #expect(SessionStats.hours(3900) == "1h 05m")
     #expect(SessionStats.hours(2700) == "45m")
 }
+
+@Test func sessionClock() {
+    let t0 = Date(timeIntervalSince1970: 1000)
+    var clock = SessionClock(planned: 1500, startedAt: t0)
+    #expect(clock.elapsed(at: t0.addingTimeInterval(10)) == 10)
+    clock.pause(at: t0.addingTimeInterval(10))
+    #expect(clock.isPaused && clock.elapsed(at: t0.addingTimeInterval(100)) == 10)
+    clock.resume(at: t0.addingTimeInterval(100))
+    #expect(clock.elapsed(at: t0.addingTimeInterval(105)) == 15)
+    #expect(!clock.isOver(at: t0.addingTimeInterval(105)))
+    #expect(clock.stop(at: t0.addingTimeInterval(1600)) == 1510)
+    #expect(clock.isPaused && clock.elapsed(at: t0.addingTimeInterval(9999)) == 1510)
+}

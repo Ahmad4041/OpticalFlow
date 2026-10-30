@@ -128,16 +128,16 @@ enum SelfTest {
         model.idleOverride = 400
         model.debugAdvance(seconds: 0)
         check("S-015 five idle minutes pause the session", model.paused && model.idleSince != nil)
-        let banked = model.session?.seconds ?? -1
+        let banked = model.elapsed
         model.idleOverride = 0
         model.keepIdleTime()
-        check("S-015 Keep adds the idle time and resumes", !model.paused && (model.session?.seconds ?? 0) >= banked + 399, "\(model.session?.seconds ?? -1) vs \(banked)")
+        check("S-015 Keep adds the idle time and resumes", !model.paused && model.elapsed >= banked + 399, "\(model.elapsed) vs \(banked)")
         model.idleOverride = 400
         model.debugAdvance(seconds: 0)
-        let beforeDiscard = model.session?.seconds ?? -1
+        let beforeDiscard = model.elapsed
         model.idleOverride = 0
         model.discardIdleTime()
-        check("S-015 Discard resumes without the idle time", !model.paused && model.session?.seconds == beforeDiscard)
+        check("S-015 Discard resumes without the idle time", !model.paused && model.elapsed - beforeDiscard <= 1)
         model.stopSession()
 
         // S-016

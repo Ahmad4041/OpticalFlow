@@ -30,8 +30,8 @@ final class AppModel {
 
     // Session
     private(set) var session: Session?
-    private(set) var paused = false
-    private var resumedAt: Date?
+    private var clock: SessionClock?
+    var paused: Bool { clock?.isPaused ?? false }
     private var now = Date.now
     private var ticker: Task<Void, Never>?
     private var notifiedDone = false
@@ -233,11 +233,7 @@ final class AppModel {
         return stored > 0 ? stored : 25
     }
 
-    var elapsed: Int {
-        guard let session else { return 0 }
-        let live = resumedAt.map { now.timeIntervalSince($0) } ?? 0
-        return session.seconds + Int(live)
-    }
+    var elapsed: Int { clock?.elapsed(at: now) ?? 0 }
 
     /// The menu bar text. nil when nothing runs.
     var menuLabel: String? {
@@ -282,9 +278,8 @@ final class AppModel {
         context.insert(new)
         save()
         session = new
-        paused = false
+        clock = SessionClock(planned: new.plannedMinutes * 60, startedAt: .now)
         notifiedDone = false
-        resumedAt = .now
         now = .now
         breakUntil = nil
         runTicker()
@@ -301,7 +296,7 @@ final class AppModel {
 
     /// Keep: the idle time counts as work. Discard: it does not. Both resume.
     func keepIdleTime() {
-        if let idleSince, let session { session.seconds += Int(Date.now.timeIntervalSince(idleSince)) }
+        if let idleSince { clock?.banked += Int(Date.now.timeIntervalSince(idleSince)) }
         idleSince = nil
         resume()
     }
@@ -318,7 +313,7 @@ final class AppModel {
             pause()
             if !Store.isOverridden { Notifier.post("Away for 5 minutes", "Keep that time in the session, or discard it?", category: Notifier.idle) }
         }
-        if let session, !notifiedDone, elapsed >= session.plannedMinutes * 60 {
+        if let session, let clock, !notifiedDone, clock.isOver(at: now) {
             notifiedDone = true
             if !Store.isOverridden { Notifier.post("Session done", session.task?.title ?? "", category: Notifier.sessionDone) }
         }
@@ -328,32 +323,25 @@ final class AppModel {
         }
     }
 
-    /// Moves live time into the session record.
-    private func bank() {
-        if let resumedAt, let session { session.seconds += Int(Date.now.timeIntervalSince(resumedAt)) }
-        resumedAt = nil
-    }
-
     func pause() {
-        guard session != nil, !paused else { return }
-        bank()
-        paused = true
+        guard session != nil else { return }
+        clock?.pause(at: .now)
+        session?.seconds = clock?.banked ?? 0
     }
 
     func resume() {
-        guard session != nil, paused else { return }
-        resumedAt = .now
+        guard session != nil else { return }
         now = .now
-        paused = false
+        clock?.resume(at: now)
     }
 
     func stopSession() {
         guard let session else { return }
-        bank()
+        session.seconds = clock?.stop(at: .now) ?? session.seconds
         session.endedAt = .now
         save()
         self.session = nil
-        paused = false
+        clock = nil
         if breakUntil == nil { ticker?.cancel(); ticker = nil }
         if recorder.isRecording { Task { await recorder.stop() } }
     }
@@ -424,7 +412,7 @@ final class AppModel {
 
     /// Tests only: pretend time passed.
     func debugAdvance(seconds: Int) {
-        session?.seconds += seconds
+        clock?.banked += seconds
         tick()
     }
 }
