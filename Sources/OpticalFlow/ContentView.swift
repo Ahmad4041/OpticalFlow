@@ -13,7 +13,7 @@ struct ContentView: View {
             Sidebar()
         } content: {
             ContentColumn()
-                .navigationSplitViewColumnWidth(min: boardShown ? 760 : 320, ideal: boardShown ? 1_040 : 400)
+                .navigationSplitViewColumnWidth(min: 320, ideal: 400)
         } detail: {
             DetailColumn()
         }
@@ -163,8 +163,6 @@ struct ContentColumn: View {
         switch model.sidebar ?? .list(.inbox) {
         case .sessions: SessionList()
         case .recordings: RecordingList()
-        case .project(let id) where model.showsBoard:
-            if let project = model.project(id) { BoardView(project: project).navigationTitle(project.name).toolbar { ViewModeToolbar() } }
         case let page: TaskList(page: page)
         }
     }
@@ -174,7 +172,13 @@ struct DetailColumn: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        if let task = model.selectedTask {
+        if case .project(let id) = model.sidebar, model.showsBoard, let project = model.project(id) {
+            // The board takes the wide column; the selected card's detail slides in as an inspector.
+            BoardView(project: project)
+                .inspector(isPresented: Binding(get: { model.selectedTask != nil }, set: { if !$0 { model.selection = nil } })) {
+                    if let task = model.selectedTask { TaskDetail(task: task).inspectorColumnWidth(min: 280, ideal: 340) }
+                }
+        } else if let task = model.selectedTask {
             TaskDetail(task: task)
         } else if let recording = model.selectedRecording {
             RecordingDetail(recording: recording)

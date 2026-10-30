@@ -60,7 +60,7 @@ struct BoardColumnView: View {
             Spacer(minLength: Space.lg)
         }
         .padding(Space.sm)
-        .frame(width: 240, alignment: .top)
+        .frame(width: 220, alignment: .top)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: Space.md))
         .gridProbe("column-\(column.rawValue)", area: "board")
@@ -102,6 +102,7 @@ struct BoardCard: View {
             Spacer(minLength: 0)
         }
         .padding(Space.sm)
+        .fixedSize(horizontal: false, vertical: true)   // the stripe has no height of its own; the text sets the card's
         .background(.background, in: RoundedRectangle(cornerRadius: Space.sm))
         .overlay(RoundedRectangle(cornerRadius: Space.sm).strokeBorder(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary), lineWidth: selected ? 2 : 1))
         .contextMenu {

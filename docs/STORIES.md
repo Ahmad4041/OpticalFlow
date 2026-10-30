@@ -281,7 +281,7 @@ Acceptance:
 - [unit] BoardColumn.column: done wins, then doing, then someday, else to do.
 - [self] Dropping on Doing sets the flag; Backlog flags someday; Done completes; To Do reopens; completing clears doing.
 - [snap] Four 240 pt columns with cards: colour stripe, title, due, Records and Live badges; the Done column shows the last seven days.
-UX: List/Board segmented control in the toolbar of project pages, remembered; Command-Option-B toggles. Cards select on click so the detail follows. Columns are the project's own state, not a new field per column.
+UX: List/Board segmented control in the toolbar of project pages, remembered; Command-Option-B toggles. The board fills the detail column and the list stays in the middle; clicking a card opens its detail as an inspector. Columns are the project's own state, not a new field per column.
 Status: done
 
 ### S-035 Record sessions per task

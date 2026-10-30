@@ -121,6 +121,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // Started from a terminal, the process is not a foreground app yet.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
+        // One-time: an earlier build widened the middle column for the board, and AppKit kept that width for every page.
+        if !UserDefaults.standard.bool(forKey: "migrated.splitWidths.1") {
+            UserDefaults.standard.removeObject(forKey: "NSSplitView Subview Frames main, SidebarNavigationSplitView")
+            UserDefaults.standard.set(true, forKey: "migrated.splitWidths.1")
+        }
         if !Store.isOverridden { UNUserNotificationCenter.current().delegate = self }
     }
 
