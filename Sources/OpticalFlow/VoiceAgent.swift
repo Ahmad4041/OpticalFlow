@@ -372,7 +372,7 @@ final class VoiceAgent {
         var answer = ""
         for try await line in out.fileHandleForReading.bytes.lines {
             guard let data = line.data(using: .utf8), let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
-            if let step = Self.step(in: event) { steps.append(step) }
+            if let step = Self.step(in: event), steps.last != step { steps.append(step) }   // the stream repeats a message event
             if let final = Self.answer(in: event) { answer = final }
         }
         let errors = String(decoding: await stderr, as: UTF8.self)
