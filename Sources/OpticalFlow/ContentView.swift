@@ -358,7 +358,9 @@ struct SessionList: View {
                                     .frame(width: Space.md, height: max(Space.xs, 40 * CGFloat(day.seconds) / CGFloat(top)))
                                 Text(day.date, format: .dateTime.weekday(.narrow))
                                     .font(.caption2).foregroundStyle(.secondary)
+                                    .fixedSize()
                             }
+                            .frame(width: Space.lg)
                             .help("\(day.date.formatted(.dateTime.weekday(.wide))): \(SessionStats.hours(day.seconds))")
                         }
                     }
