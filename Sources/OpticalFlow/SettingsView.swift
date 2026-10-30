@@ -60,11 +60,17 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 struct GeneralSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage("plannedMinutes") private var plannedMinutes = 25
+    @AppStorage(ControlStrip.enabledKey) private var controlStrip = true
 
     var body: some View {
         @Bindable var recorder = model.recorder
         Section("Sessions") {
             Stepper("Length: \(plannedMinutes) minutes", value: $plannedMinutes, in: 5...180, step: 5)
+            Toggle("Timer in the Touch Bar Control Strip", isOn: $controlStrip)
+                .onChange(of: controlStrip) {
+                    if controlStrip { ControlStrip.shared.install(model: model) } else { ControlStrip.shared.remove() }
+                }
+                .help("A timer button next to volume and brightness that stays while other apps are in front. Tap it for Pause, Stop, Record, and Voice.")
             LabeledContent("Start or stop anywhere", value: "⌃⌥⌘S")
             LabeledContent("Quick entry anywhere", value: "⌃Space")
             LabeledContent("Shortcuts and Focus") {
