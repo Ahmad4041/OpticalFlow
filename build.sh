@@ -3,9 +3,13 @@
 # Build products live in ~/Library/Developer/OpticalFlow, outside the repo
 # (and outside Dropbox or iCloud, which would try to sync them).
 #
-# Usage: ./build.sh            release build, install
-#        ./build.sh --debug    debug build, install
-#        ./build.sh --open     install, then quit the running copy and open the new one
+# Usage: ./build.sh            release build; install unless the app is running (then it stays staged)
+#        ./build.sh --debug    debug build
+#        ./build.sh --open     quit the running copy, install, open the new one
+#
+# The bundle is assembled in a staging folder first. Tests (tools/selftest.sh, tools/snap.sh)
+# run that staged copy, so a build never replaces an app someone is using: macOS kills a
+# running app whose signed binary changes on disk, with no crash report.
 set -euo pipefail
 here=${0:A:h}
 name="OpticalFlow"
@@ -32,8 +36,8 @@ if [[ -n "$stale" ]]; then
   exit 1
 fi
 
-app="$HOME/Applications/$name.app"
-mkdir -p "$HOME/Applications"
+installed="$HOME/Applications/$name.app"
+app="$scratch/staged/$name.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/$name"
@@ -48,13 +52,26 @@ if [[ -d "$here/Icon/AppIcon.icon" ]]; then
 fi
 xattr -cr "$app"
 codesign --force --sign "$identity" "$app" 2>&1 | grep -v "replacing existing signature" || true
-echo "installed $app (signed: ${identity})"
+echo "staged $app (signed: ${identity})"
+
+# Install only when nothing is using the installed copy.
+running=$(pgrep -f "$installed/Contents/MacOS/$name\$" || true)
+if [[ -n "$running" && " $* " != *" --open "* ]]; then
+  echo "not installed: $name is running (pid $running). Quit it, or run ./build.sh --open."
+  exit 0
+fi
+if [[ -n "$running" ]]; then
+  osascript -e "quit app \"$name\"" 2>/dev/null || true
+  for _ in {1..20}; do pgrep -f "$installed/Contents/MacOS/$name\$" >/dev/null || break; sleep 0.25; done
+fi
+mkdir -p "$HOME/Applications"
+rm -rf "$installed"
+ditto "$app" "$installed"
+echo "installed $installed"
 # The CLI: the app binary under a short name on PATH (bama agent-cli skill).
 mkdir -p "$HOME/.local/bin"
-ln -sf "$app/Contents/MacOS/$name" "$HOME/.local/bin/opticalflow"
+ln -sf "$installed/Contents/MacOS/$name" "$HOME/.local/bin/opticalflow"
 
 if [[ " $* " == *" --open "* ]]; then
-  osascript -e "quit app \"$name\"" 2>/dev/null || true
-  sleep 0.5
-  open "$app"
+  open "$installed"
 fi

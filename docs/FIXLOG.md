@@ -82,3 +82,8 @@ Rule: A new Codable or array attribute on a @Model is optional with a computed n
 Cause: `Session.task` had no inverse, so deleting a task left sessions pointing at a row that no longer existed; reading `task?.isDone` in the list asserted inside SwiftData.
 Fix: `TaskItem.sessions` is the inverse with nullify; `delete(task)` also clears the pointer by hand. Stores from before are repaired with one SQL UPDATE before the container opens (`Store.repair`): SwiftData aborts on clearing the pointer too, so a first attempt through the model crashed at launch.
 Rule: Every optional relationship on a @Model declares its inverse and delete rule, and the self-test reads the other side after a delete. Repairs of broken rows run in SQL before SwiftData opens the file.
+
+## 2026-10-31 The app "crashed" with no crash report while a build ran
+Cause: `build.sh` deleted and rewrote `~/Applications/OpticalFlow.app` while that app was running. macOS kills a running process whose signed binary changed on disk, and writes no report.
+Fix: the build is assembled in a staging folder; tests run the staged copy; the installed app is replaced only when it is not running, or with `--open`, which quits it first.
+Rule: Never overwrite a running app's bundle. Stage builds, test the staged copy, and install when the user is ready.
