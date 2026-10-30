@@ -322,6 +322,45 @@ Acceptance:
 UX: replaces the "No Selection" placeholder. Start on the card runs the session; the Record switch flags the task. Done completes the task and stops the session.
 Status: done
 
+### S-039 Add tasks on the board
+As the user, on the board I click + in a column header, or press Command-N, type a title, and the card appears in that column of this project.
+Screens: board
+Depends: S-034
+Acceptance:
+- [self] addTask(title:project:column:) sets the project and the column's flags; Backlog adds are Someday.
+- [self] Delete on a card removes it.
+UX: + on every column; the toolbar + and Command-N open the draft in To Do. Cards also get Complete, Priority, and Delete in their menu.
+Status: done
+
+### S-040 Priority
+As the user, I give a task a priority (None, Low, Medium, High) and see a flag on its row and card; the Focus view offers the most urgent task first.
+Screens: today, board
+Depends: S-038
+Acceptance:
+- [unit] Priority.parse reads high, urgent, asap, p1, medium, low, none.
+- [self] priority round-trips through the model; upNext prefers the urgent task.
+- [self] CLI: tasks add and update take --priority; JSON carries priority.
+UX: Picker in the detail; Priority submenu in row and card menus; red, orange, or accent flag.
+Status: done
+
+### S-041 Voice agent
+As the user, I press Control-Option-Space anywhere, say what I want ("make the login loop urgent", "add a note to the chapter export: use the YouTube preset", "start the OBS scene"), and an orchestrator does it in the app and answers in one sentence.
+Screens: voice, settings-agent
+Depends: S-037, S-040
+Acceptance:
+- [unit] VoiceIntent.parse maps add, complete, start, stop, priority, and note phrasings; anything else is a new task.
+- [self] perform() adds with a date, sets priority, appends a note, starts and stops a session, completes, and reports a miss without changing anything.
+- [self] `opticalflow agent say "…"` runs the same path, so a Shortcut with Dictate Text works too.
+UX: On-device speech when the language supports it; a pause sends. Orchestrator in Settings > Agent: Built in (no AI), Claude Code (`claude -p`, only the opticalflow command allowed), or Codex (`codex exec`, workspace sandbox). ChatGPT has no command line on the Mac, so it is not offered.
+Status: done
+
+### S-042 Hand a task to a sandboxed agent
+As the user, I hand a task with its notes to an agent that works on it in a sandbox for the long run, and see its progress and result on the card.
+Screens: board
+Depends: S-041
+Acceptance: to write with the user: which runtime (Claude Code or Codex in a container or a separate checkout), what "done" means, how results come back (notes, a recording, a PR link).
+Status: planned
+
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
 As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.

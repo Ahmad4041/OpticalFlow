@@ -37,6 +37,7 @@ struct TaskList: View {
                 Button("Complete") { model.complete(task) }
                 Button("Start Session") { model.startSession(on: task) }
                 Toggle("Record Sessions", isOn: Binding(get: { task.recordsSession }, set: { task.recordsSession = $0; model.save() }))
+                PriorityMenu(task: task)
                 Divider()
                 Button("Due Today") { model.move([task.uuid.uuidString], to: .list(.today)) }
                 Button("Due Tomorrow") { model.move([task.uuid.uuidString], to: .list(.upcoming)) }
@@ -49,10 +50,7 @@ struct TaskList: View {
                     }
                 }
                 Divider()
-                Button("Delete", role: .destructive) {
-                    context.delete(task)
-                    try? context.save()
-                }
+                Button("Delete", role: .destructive) { model.delete(task) }
             }
     }
 
@@ -145,6 +143,11 @@ struct TaskRow: View {
                     .foregroundStyle(.red)
                     .help("Sessions on this task record the screen")
             }
+            if task.priority != .none {
+                PriorityFlag(priority: task.priority)
+                    .labelStyle(.iconOnly)
+                    .font(.caption)
+            }
             if showProject, let project = task.project {
                 Image(systemName: "circle.fill")
                     .font(.caption2)
@@ -175,6 +178,9 @@ struct TaskDetail: View {
                            displayedComponents: .date)
             }
             Toggle("Someday", isOn: $task.isSomeday)
+            Picker("Priority", selection: $task.priority) {
+                ForEach(Priority.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
             Section("Sessions") {
                 Toggle("Record the screen during sessions", isOn: $task.recordsSession)
                 Toggle("Doing (on the board)", isOn: $task.isDoing)

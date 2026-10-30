@@ -221,6 +221,41 @@ enum SelfTest {
         model.sidebar = .sessions
         check("S-038 pages without tasks fall back to Today", model.upNext.map { model.tasks(for: .list(.today)).contains($0) } == true, model.upNext?.title ?? "nil")
         model.sidebar = .project(projectID)
+
+        // S-039: the board adds tasks into a column.
+        guard let boardProject = model.project(projectID),
+              let card = model.addTask(title: "Board card fri", project: boardProject, column: .doing) else { return check("S-039 board add", false) }
+        check("S-039 a board add lands in its column with the project", card.project == boardProject && card.boardColumn == .doing && card.due != nil)
+        model.addTask(title: "Parked", project: boardProject, column: .backlog)
+        check("S-039 Backlog adds are Someday", model.tasks(for: .list(.someday)).contains { $0.title == "Parked" })
+        model.delete(card)
+        check("S-039 Delete on a card removes it", !model.tasks(for: .project(projectID)).contains(card))
+
+        // S-040: priority.
+        task.priority = .high
+        check("S-040 priority round-trips", task.priority == .high && task.priorityRaw == 3)
+        check("S-040 Focus prefers the urgent task", model.upNext == task || model.upNext?.isDoing == true)
+        task.priority = .none
+
+        // S-041: the built-in voice orchestrator.
+        model.sidebar = .list(.inbox)
+        var reply = model.perform(VoiceIntent.parse("add a task call the bank tomorrow"))
+        let bank = model.tasks(for: .list(.upcoming)).first { $0.title == "Call the bank" || $0.title == "call the bank" }
+        check("S-041 'add a task' adds it with its date", bank != nil && reply.hasPrefix("Added"), reply)
+        reply = model.perform(.setPriority(match: "call the bank", .high))
+        check("S-041 'make X urgent' sets high priority", bank?.priority == .high, reply)
+        reply = model.perform(.addNote(match: "the bank", note: "ask about the card"))
+        check("S-041 a note lands on the matching task", bank?.notes.contains("ask about the card") == true, reply)
+        reply = model.perform(.start(match: "bank"))
+        check("S-041 'start X' starts a session on it", model.session?.task == bank, reply)
+        reply = model.perform(.stop)
+        check("S-041 'stop the session' stops it", model.session == nil, reply)
+        reply = model.perform(.complete(match: "call the bank"))
+        check("S-041 'complete X' completes it", bank?.isDone == true, reply)
+        reply = model.perform(.complete(match: "zebra quantum"))
+        check("S-041 no match is reported, nothing changes", reply.hasPrefix("No open task"), reply)
+        check("S-041 orchestrators report install state", Orchestrator.builtin.isInstalled)
+        model.sidebar = .project(projectID)
         let picks = model.recorder.pickRequests
         model.startSession(on: task)
         check("S-035 a session puts the task in Doing", task.isDoing)

@@ -14,6 +14,7 @@
 <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>NSMicrophoneUsageDescription</key><string>OpticalFlow records your voice with the screen when the microphone is on.</string>
+<key>NSSpeechRecognitionUsageDescription</key><string>OpticalFlow turns what you say into tasks and commands, on this Mac when it can.</string>
 <key>NSCameraUsageDescription</key><string>OpticalFlow records a camera track next to the screen.</string>
 <key>CFBundleURLTypes</key><array><dict>
 <key>CFBundleURLName</key><string>com.ahmadnaeem.opticalflow</string>

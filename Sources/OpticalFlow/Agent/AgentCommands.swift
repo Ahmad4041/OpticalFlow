@@ -63,6 +63,7 @@ enum AgentCommands {
                               .init(name: "project", help: "a project id or name"),
                               .init(name: "due", help: "today, tomorrow, fri, in 3 days, 5 nov, or 2026-11-05"),
                               .init(name: "someday", kind: .boolean, help: "park it in Someday"),
+                              .init(name: "priority", help: "none, low, medium, or high (urgent)"),
                               .init(name: "record", kind: .boolean, help: "record the screen during its sessions")],
                      example: "opticalflow tasks add --title \"Fix the login loop\" --project OpticalFlow --due tomorrow --json") { args, model in
             guard let task = model.addTask(title: try args.required("title"), on: .list(.inbox)) else { throw AgentError.invalid("--title cannot be empty") }
@@ -78,6 +79,7 @@ enum AgentCommands {
                               .init(name: "due", help: "a date, or \"none\" to clear it"),
                               .init(name: "someday", kind: .boolean, help: "true or false"),
                               .init(name: "doing", kind: .boolean, help: "on the board's Doing column"),
+                              .init(name: "priority", help: "none, low, medium, or high (urgent)"),
                               .init(name: "record", kind: .boolean, help: "record the screen during its sessions")],
                      example: "opticalflow tasks update 3f2a9c1e --due fri --record true --json") { args, model in
             let task = try findTask(try args.required("id"), in: model)
@@ -235,6 +237,20 @@ enum AgentCommands {
                     "hint": "run `opticalflow recordings list` in a minute to see the new file"]
         },
 
+        // MARK: Voice
+        AgentCommand(name: "agent say", summary: "Send a sentence to the voice agent, as if spoken. The built-in orchestrator answers at once; Claude Code or Codex answer in the panel.",
+                     params: [.init(name: "text", required: true, positional: true, help: "what to do, in plain words"),
+                              .init(name: "builtin", kind: .boolean, help: "use the built-in parser whatever Settings says")],
+                     example: "opticalflow agent say \"make the login loop urgent\" --json") { args, model in
+            let text = try args.required("text")
+            if try args.bool("builtin") == true || model.voice.orchestrator == .builtin {
+                let intent = VoiceIntent.parse(text)
+                return ["intent": "\(intent)", "reply": model.perform(intent)]
+            }
+            model.voice.send(text)
+            return ["sentTo": model.voice.orchestrator.title, "reply": "pending; see the voice panel"]
+        },
+
         // MARK: Window
         AgentCommand(name: "open", summary: "Show a page in the window.",
                      params: [.init(name: "page", required: true, positional: true, help: pages),
@@ -288,6 +304,10 @@ enum AgentCommands {
         if let someday = try args.bool("someday") { task.isSomeday = someday }
         if let doing = try args.bool("doing") { task.isDoing = doing }
         if let record = try args.bool("record") { task.recordsSession = record }
+        if let text = args.string("priority") {
+            guard let priority = Priority.parse(text) else { throw AgentError.usage("--priority takes none, low, medium, or high") }
+            task.priority = priority
+        }
     }
 
     static func parseDue(_ text: String) throws -> Date {
@@ -326,6 +346,7 @@ extension TaskItem: AgentIdentified {
     nonisolated var agentJSON: JSONObject {
         var json: JSONObject = ["id": String(agentID.prefix(8)), "title": title, "notes": notes, "done": isDone,
                                 "someday": isSomeday, "doing": isDoing, "records": recordsSession, "column": boardColumn.rawValue,
+                                "priority": priority.title.lowercased(),
                                 "createdAt": JSON.date(createdAt)]
         if let due { json["due"] = JSON.date(due) }
         if let project { json["project"] = project.name; json["projectId"] = String(project.agentID.prefix(8)) }

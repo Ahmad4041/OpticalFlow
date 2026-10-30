@@ -136,3 +136,28 @@ func cleans(_ input: String, expected: String?) {
     #expect(BoardColumn.column(someday: true, doing: true, done: false) == .doing)
     #expect(BoardColumn.column(someday: true, doing: true, done: true) == .done)
 }
+
+@Test func priorities() {
+    #expect(Priority.parse("urgent") == .high && Priority.parse("P2") == .medium && Priority.parse("low") == .low)
+    #expect(Priority.parse("none") == Priority.none && Priority.parse("later") == nil)
+    #expect(Priority.high > Priority.low)
+}
+
+@Test("Voice intents", arguments: [
+    ("Add a task fix the login loop tomorrow.", VoiceIntent.add(title: "fix the login loop tomorrow")),
+    ("remind me to call the bank", .add(title: "call the bank")),
+    ("Write the chapter export", .add(title: "Write the chapter export")),
+    ("complete the login loop", .complete(match: "the login loop")),
+    ("login loop is done", .complete(match: "login loop")),
+    ("start a session on the chapter export", .start(match: "the chapter export")),
+    ("work on the OBS scene", .start(match: "the obs scene")),
+    ("stop the session", .stop),
+    ("make the login loop urgent", .setPriority(match: "the login loop", .high)),
+    ("mark chapter export as low priority", .setPriority(match: "chapter export", .low)),
+    ("the picker API is medium priority", .setPriority(match: "the picker api", .medium)),
+    ("add a note to the login loop: repro needs sign out first", .addNote(match: "the login loop", note: "repro needs sign out first")),
+    ("note on chapter export saying use the youtube preset", .addNote(match: "chapter export", note: "use the youtube preset")),
+])
+func voiceIntents(_ text: String, expected: VoiceIntent) {
+    #expect(VoiceIntent.parse(text) == expected)
+}

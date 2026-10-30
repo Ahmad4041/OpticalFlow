@@ -19,7 +19,13 @@ struct ContentView: View {
                 } detail: {
                     BoardView(project: project)
                         .navigationTitle(project.name)
-                        .toolbar { ViewModeToolbar() }
+                        .toolbar {
+                            ViewModeToolbar()
+                            ToolbarItem {
+                                Button("New Task", systemImage: "plus") { model.draftColumn = .todo; model.draftTitle = "" }
+                                    .help("Add a task to To Do (Command-N)")
+                            }
+                        }
                 }
             } else {
                 NavigationSplitView {

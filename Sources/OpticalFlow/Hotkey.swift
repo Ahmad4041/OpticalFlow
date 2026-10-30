@@ -34,6 +34,11 @@ enum Hotkey {
         register(id: 1, keyCode: UInt32(kVK_ANSI_S), modifiers: UInt32(controlKey | optionKey | cmdKey), action: action)
     }
 
+    /// Control-Option-Space: the voice panel.
+    static func registerVoice(_ action: @escaping () -> Void) {
+        register(id: 3, keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey | optionKey), action: action)
+    }
+
     /// Control-Space: the quick-entry panel.
     static func registerQuickEntry(_ action: @escaping () -> Void) {
         register(id: 2, keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey), action: action)

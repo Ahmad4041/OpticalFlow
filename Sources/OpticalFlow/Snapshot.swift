@@ -79,6 +79,18 @@ enum Snapshot {
                 }
                 model.quickEntry.close()
             }
+            if only == nil || only?.contains("voice") == true {
+                model.voice.show(listening: false)
+                model.voice.transcript = "Make the login loop urgent"
+                try? await Task.sleep(for: .seconds(0.8))
+                let panel = NSApp.windows.first { $0.frameAutosaveName == "VoicePanel" }
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.4))
+                    capture(to: "\(dir)/voice-\(mode).png", window: panel)
+                }
+                model.voice.close()
+            }
             if only == nil || only?.contains("minitimer") == true {
                 model.selection = model.firstID(for: .list(.today))
                 model.startSession()

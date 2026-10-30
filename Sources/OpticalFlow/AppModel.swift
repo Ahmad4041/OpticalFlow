@@ -22,6 +22,8 @@ final class AppModel {
     var search = ""
     /// Non-nil while the inline new-task row is open.
     var draftTitle: String?
+    /// Which board column shows the draft row.
+    var draftColumn: BoardColumn = .todo
     /// Done tasks completed after this still show, dimmed, for two seconds.
     var hideDoneBefore = Date.now
     var projectPrompt: ProjectPrompt?
@@ -53,6 +55,13 @@ final class AppModel {
         let timer = MiniTimer(model: self)
         _miniTimer = timer
         return timer
+    }
+    @ObservationIgnored private var _voice: VoiceAgent?
+    var voice: VoiceAgent {
+        if let _voice { return _voice }
+        let agent = VoiceAgent(model: self)
+        _voice = agent
+        return agent
     }
     @ObservationIgnored private var _quickEntry: QuickEntry?
     var quickEntry: QuickEntry {
@@ -100,6 +109,14 @@ final class AppModel {
         else if task.isIn(.upcoming) { sidebar = .list(.upcoming) }
         else { sidebar = .list(.inbox) }
         selection = task.id
+    }
+
+    func delete(_ task: TaskItem) {
+        if session?.task == task { stopSession() }
+        if selection == task.id { selection = nil }
+        undoCompleted.removeAll { $0 == task }
+        context.delete(task)
+        save()
     }
 
     func deleteSession(_ session: Session) {
@@ -169,7 +186,7 @@ final class AppModel {
         if let sidebar, sidebar.showsTasks { pages.insert(sidebar, at: 0) }
         for page in pages {
             let open = tasks(for: page).filter { !$0.isDone }
-            if let task = open.first(where: \.isDoing) ?? open.first { return task }
+            if let task = open.first(where: \.isDoing) ?? open.max(by: { $0.priority < $1.priority }) { return task }
         }
         return nil
     }
@@ -228,6 +245,68 @@ final class AppModel {
             }
         }
         save()
+    }
+
+    /// Adds a task to a project in one board column.
+    @discardableResult
+    func addTask(title: String, project: Project, column: BoardColumn) -> TaskItem? {
+        guard let task = addTask(title: title, on: .project(project.uuid)) else { return nil }
+        move([task.uuid.uuidString], toColumn: column)
+        return task
+    }
+
+    /// The open task whose title best matches spoken words: a title containing the words,
+    /// else the one sharing the most words. The current page wins ties.
+    func task(matching text: String) -> TaskItem? {
+        let words = Set(text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+            .filter { !["the", "a", "an", "task", "my", "on", "to"].contains($0) })
+        guard !words.isEmpty else { return nil }
+        let all = ((try? context.fetch(FetchDescriptor<TaskItem>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []).filter { !$0.isDone }
+        func score(_ task: TaskItem) -> Int {
+            let title = task.title.lowercased()
+            let titleWords = Set(title.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init))
+            let overlap = words.intersection(titleWords).count
+            let onPage = sidebar.map { visible(task, on: $0) } ?? false
+            return (title.contains(text.lowercased()) ? 100 : 0) + overlap * 10 + (onPage ? 1 : 0)
+        }
+        let best = all.max { score($0) < score($1) }
+        return best.flatMap { score($0) >= 10 ? $0 : nil }
+    }
+
+    /// Runs one built-in voice intent and returns what to say back.
+    func perform(_ intent: VoiceIntent) -> String {
+        func found(_ match: String) -> TaskItem? {
+            let task = self.task(matching: match)
+            if let task { selection = task.id }
+            return task
+        }
+        switch intent {
+        case .add(let title):
+            guard let task = addTask(title: title, on: .list(.inbox)) else { return "Nothing to add." }
+            return "Added “\(task.title)” to Inbox" + (task.due.map { ", due \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "") + "."
+        case .complete(let match):
+            guard let task = found(match) else { return "No open task matches “\(match)”." }
+            complete(task)
+            return "Completed “\(task.title)”."
+        case .start(let match):
+            guard let task = found(match) else { return "No open task matches “\(match)”." }
+            startSession(on: task)
+            return "Started a \(plannedMinutes) minute session on “\(task.title)”."
+        case .stop:
+            guard session != nil else { return "No session is running." }
+            stopSession()
+            return "Session stopped."
+        case .setPriority(let match, let priority):
+            guard let task = found(match) else { return "No open task matches “\(match)”." }
+            task.priority = priority
+            save()
+            return "“\(task.title)” is now \(priority.title.lowercased()) priority."
+        case .addNote(let match, let note):
+            guard let task = found(match) else { return "No open task matches “\(match)”." }
+            task.notes = task.notes.isEmpty ? note : task.notes + "\n" + note
+            save()
+            return "Added a note to “\(task.title)”."
+        }
     }
 
     /// A board drop. Backlog = someday; To Do = open; Doing = the doing flag; Done = completed.

@@ -24,6 +24,7 @@ struct SettingsView: View {
         Form {
             switch tab {
             case .general: GeneralSettings()
+            case .agent: AgentSettings()
             case .appearance: AppearanceSettings()
             }
         }
@@ -35,13 +36,14 @@ struct SettingsView: View {
 
 /// The Settings tabs. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, appearance
+    case general, agent, appearance
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .general: "Sessions"
+        case .agent: "Agent"
         case .appearance: "Appearance"
         }
     }
@@ -49,6 +51,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .general: "timer"
+        case .agent: "mic.fill"
         case .appearance: "paintpalette"
         }
     }
@@ -83,6 +86,39 @@ struct GeneralSettings: View {
         }
         Section("Camera") {
             CameraLayoutControls(layout: $recorder.cameraLayout)
+        }
+    }
+}
+
+/// Which program turns a spoken sentence into opticalflow commands.
+struct AgentSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var voice = model.voice
+        Section("Voice") {
+            Picker("Orchestrator", selection: $voice.orchestrator) {
+                ForEach(Orchestrator.allCases) { which in
+                    Text(which.title + (which.isInstalled ? "" : " (not installed)")).tag(which)
+                        .selectionDisabled(!which.isInstalled)
+                }
+            }
+            LabeledContent("Speak anywhere", value: "⌃⌥Space")
+            Text(model.voice.orchestrator.blurb)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        Section("From Shortcuts or a script") {
+            LabeledContent("Command", value: "opticalflow agent say \"…\"")
+                .textSelection(.enabled)
+            Text("A Shortcut with Dictate Text, then Run Shell Script with that command, gives the same voice control from Siri or a hotkey.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        Section("Next phase") {
+            Text("Hand a task to an agent in a sandbox for the long run. Not built yet; the orchestrator above is the first step.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
         }
     }
 }

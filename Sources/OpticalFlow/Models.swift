@@ -48,6 +48,8 @@ final class TaskItem {
     var isDoing: Bool = false
     /// Starting a session on this task opens the screen recorder too.
     var recordsSession: Bool = false
+    /// Priority.rawValue; 0 is none.
+    var priorityRaw: Int = 0
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?
@@ -57,6 +59,10 @@ final class TaskItem {
     }
 
     var isDone: Bool { completedAt != nil }
+    var priority: Priority {
+        get { Priority(rawValue: priorityRaw) ?? .none }
+        set { priorityRaw = newValue.rawValue }
+    }
     var boardColumn: BoardColumn { BoardColumn.column(someday: isSomeday, doing: isDoing, done: isDone) }
 
     /// `asOpen` evaluates the list rule as if the task were not done (a just-completed row that still shows).

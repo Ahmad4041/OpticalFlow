@@ -54,6 +54,8 @@ struct MenuBarPanel: View {
                 .controlSize(.small)
             }
             Divider()
+            Button("Voice Command", systemImage: "mic.fill") { model.voice.toggle() }
+                .help("Say what to do (Control-Option-Space)")
             Toggle("Record screen", systemImage: "record.circle", isOn: Binding(
                 get: { model.recorder.isRecording },
                 set: { _ in model.toggleRecording() }))
