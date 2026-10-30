@@ -24,6 +24,7 @@ struct OpticalFlowApp: App {
                 .themed()
                 .overlay { if GridOverlay.enabled { GridOverlay() } }
                 .frame(minWidth: 860, minHeight: 520)
+                .onOpenURL { model.handle($0) }
                 .onAppear {
                     delegate.model = model
                     Hotkey.registerSession { model.toggleSession() }

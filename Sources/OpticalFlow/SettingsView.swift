@@ -64,6 +64,15 @@ struct GeneralSettings: View {
             Stepper("Length: \(plannedMinutes) minutes", value: $plannedMinutes, in: 5...180, step: 5)
             LabeledContent("Start or stop anywhere", value: "⌃⌥⌘S")
             LabeledContent("Quick entry anywhere", value: "⌃Space")
+            LabeledContent("Shortcuts and Focus") {
+                VStack(alignment: .trailing, spacing: Space.xs) {
+                    Text("Open URL: opticalflow://start, stop, pause, resume")
+                    Text("break?minutes=5, record, add?title=…, start?task=…")
+                }
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+            }
         }
         Section("Recording") {
             Toggle("Microphone on", isOn: $recorder.micEnabled)

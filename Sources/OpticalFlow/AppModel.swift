@@ -363,6 +363,36 @@ final class AppModel {
         return new
     }
 
+    // MARK: URL commands (Shortcuts, Apple Focus automations, scripts)
+
+    /// opticalflow://start[?task=<title>]  opticalflow://stop  opticalflow://pause  opticalflow://resume
+    /// opticalflow://break?minutes=5  opticalflow://record  opticalflow://add?title=<title>
+    /// Returns false for an unknown command.
+    @discardableResult
+    func handle(_ url: URL) -> Bool {
+        guard url.scheme == "opticalflow" else { return false }
+        let query = Dictionary(uniqueKeysWithValues: (URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [])
+            .compactMap { item in item.value.map { (item.name, $0) } })
+        switch url.host {
+        case "start":
+            if let title = query["task"]?.lowercased(),
+               let match = tasks(for: .list(.today)).first(where: { $0.title.lowercased().contains(title) })
+                ?? ((try? context.fetch(FetchDescriptor<TaskItem>())) ?? []).first(where: { !$0.isDone && $0.title.lowercased().contains(title) }) {
+                startSession(on: match)
+            } else {
+                startSession()
+            }
+        case "stop": stopSession()
+        case "pause": pause()
+        case "resume": resume()
+        case "break": startBreak(minutes: Int(query["minutes"] ?? "") ?? 5)
+        case "record": toggleRecording()
+        case "add": addTask(title: query["title"] ?? "", on: .list(.inbox))
+        default: return false
+        }
+        return true
+    }
+
     /// Tests only: pretend time passed.
     func debugAdvance(seconds: Int) {
         session?.seconds += seconds

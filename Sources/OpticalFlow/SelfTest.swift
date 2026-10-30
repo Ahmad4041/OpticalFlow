@@ -172,6 +172,20 @@ enum SelfTest {
         check("S-019 a deleted selection resolves to nil instead of crashing", model.selectedTask == nil)
         model.selection = task.id
 
+        // S-020
+        model.selection = task.id
+        check("S-020 opticalflow://start starts a session on the selected task", model.handle(URL(string: "opticalflow://start")!) && model.session?.task == task)
+        check("S-020 opticalflow://pause pauses", model.handle(URL(string: "opticalflow://pause")!) && model.paused)
+        check("S-020 opticalflow://stop stops", model.handle(URL(string: "opticalflow://stop")!) && model.session == nil)
+        check("S-020 start?task= finds a task by title", model.handle(URL(string: "opticalflow://start?task=ship%20the")!) && model.session?.task == today)
+        model.stopSession()
+        check("S-020 break?minutes=15 starts a break", model.handle(URL(string: "opticalflow://break?minutes=15")!) && model.breakRemaining == 900)
+        model.endBreak()
+        let added = taskCount()
+        check("S-020 add?title= adds to Inbox", model.handle(URL(string: "opticalflow://add?title=From%20Shortcuts")!) && taskCount() == added + 1)
+        check("S-020 an unknown command is refused", !model.handle(URL(string: "opticalflow://dance")!))
+        model.selection = task.id
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)

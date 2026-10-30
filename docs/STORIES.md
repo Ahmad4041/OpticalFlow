@@ -272,7 +272,15 @@ UX: Thumbnails come from AVAssetImageGenerator at one second in, cached for the 
 Status: done
 
 ## M5 System
-### S-020 App Intents: start/stop session for Shortcuts and Apple Focus. Status: todo
+### S-020 Shortcuts and Apple Focus control
+As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.
+Screens: settings-general
+Depends: S-005, S-014
+Acceptance:
+- [self] opticalflow://start starts on the selected task; start?task=<words> finds an open task by title; pause, stop, break?minutes=, add?title= work; an unknown host is refused.
+- [manual] A Shortcuts automation "When Work Focus turns on → Open URL opticalflow://start" starts a session.
+UX: URL scheme instead of App Intents, because App Intents metadata needs an Xcode project (see new-mac-app skill); the commands are listed in Settings > Sessions. ponytail: move to App Intents when the project goes XcodeGen.
+Status: done
 ### S-021 Always-on-top mini timer window. Status: todo
 ### S-022 Daily and weekly session stats. Status: todo
 

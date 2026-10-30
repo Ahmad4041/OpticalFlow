@@ -15,5 +15,9 @@
 <key>NSHighResolutionCapable</key><true/>
 <key>NSMicrophoneUsageDescription</key><string>OpticalFlow records your voice with the screen when the microphone is on.</string>
 <key>NSCameraUsageDescription</key><string>OpticalFlow records a camera track next to the screen.</string>
+<key>CFBundleURLTypes</key><array><dict>
+<key>CFBundleURLName</key><string>com.ahmadnaeem.opticalflow</string>
+<key>CFBundleURLSchemes</key><array><string>opticalflow</string></array>
+</dict></array>
 <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict></plist>
