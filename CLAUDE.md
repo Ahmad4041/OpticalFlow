@@ -40,6 +40,10 @@ SwiftData database and no server.
 - `ContentUnavailableView` for empty states.
 - Liquid Glass belongs to floating controls only, never to content.
 
+## Agents
+
+- Drive the app with `opticalflow`. See `.claude/skills/opticalflow/SKILL.md`. `Sources/OpticalFlow/Agent/` holds the CLI, socket, and MCP server; commands live in `AgentCommands.swift` and call the same `AppModel` functions as the buttons.
+
 ## Skills
 
 The bama plugin has a skill for each step: `mac-design` (design rules),

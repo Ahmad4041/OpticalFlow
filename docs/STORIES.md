@@ -294,6 +294,24 @@ Acceptance:
 UX: Toggle in the detail's Sessions section, the row's context menu, and the card's context menu. Nothing starts without the picker: the user still chooses what to capture.
 Status: done
 
+### S-036 Select a session
+As the user, I click a session row and see its task, times, overflow, notes, and recordings, with pause, stop, or start-another buttons.
+Screens: sessions
+Depends: S-006
+Acceptance:
+- [self] Selecting the first session resolves a Session, not a task; Delete removes it and clears the selection; Show Task selects the task on its page.
+- [snap] Sessions page with the first row selected and its detail on the right.
+UX: Context menu on the row: Start Another Session, Show Task, Delete. Notes are editable after the fact (retroactive logging was a top complaint in research).
+Status: done
+
+### S-037 Agent CLI
+As the user, I let Claude Code or a script drive the app with `opticalflow <noun> <verb> --json` against the running app.
+Screens: none
+Acceptance:
+- [self] check-agent-cli.sh prints PASS agent CLI; every read command returns JSON; delete reports until --yes.
+UX: 25 commands; the skill file in .claude/skills/opticalflow tells agents the rules. MCP registration is one line, documented there.
+Status: done
+
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
 As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.

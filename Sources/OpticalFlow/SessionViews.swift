@@ -12,7 +12,8 @@ struct SessionList: View {
     }
 
     var body: some View {
-        List {
+        @Bindable var model = model
+        List(selection: $model.selection) {
             Section {
                 let days = days
                 HStack(spacing: Space.lg) {
@@ -71,6 +72,15 @@ struct SessionList: View {
                         .foregroundStyle(.orange)
                 }
             }
+            .tag(session.id)
+            .contextMenu {
+                if let task = session.task {
+                    Button("Start Another Session on \(task.title)") { model.startSession(on: task) }
+                    Button("Show Task") { model.sidebar = .list(.inbox); model.showTask(task) }
+                }
+                Divider()
+                Button("Delete", role: .destructive) { model.deleteSession(session) }
+            }
             }
         }
         .overlay {
@@ -80,5 +90,62 @@ struct SessionList: View {
             }
         }
         .navigationTitle("Sessions")
+    }
+}
+
+/// One session: task, times, overflow, notes, and the recordings made during it.
+struct SessionDetail: View {
+    @Environment(AppModel.self) private var model
+    @Bindable var session: Session
+
+    private var seconds: Int { session == model.session ? model.elapsed : session.seconds }
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Task", value: session.task?.title ?? "No task")
+                if let project = session.task?.project { LabeledContent("Project", value: project.name) }
+                LabeledContent("Started", value: session.startedAt, format: .dateTime.month(.abbreviated).day().year().hour().minute())
+                if let ended = session.endedAt {
+                    LabeledContent("Ended", value: ended, format: .dateTime.hour().minute())
+                } else {
+                    LabeledContent("Status", value: model.paused ? "Paused" : "Running")
+                }
+                LabeledContent("Worked", value: Countdown.clock(seconds, padded: false))
+                LabeledContent("Planned", value: "\(session.plannedMinutes) min")
+                if seconds > session.plannedMinutes * 60 {
+                    LabeledContent("Overflow", value: "+" + Countdown.clock(seconds - session.plannedMinutes * 60, padded: false))
+                }
+            }
+            Section("Notes") {
+                TextEditor(text: $session.notes)
+                    .frame(minHeight: 100)
+            }
+            if !session.recordings.isEmpty {
+                Section("Recordings") {
+                    ForEach(session.recordings) { recording in
+                        HStack {
+                            Text(recording.url.lastPathComponent)
+                            Spacer()
+                            Text(Countdown.clock(Int(recording.duration), padded: false)).monospacedDigit().foregroundStyle(.secondary)
+                            Button("Show") { model.sidebar = .recordings; model.selection = recording.id }
+                                .buttonStyle(.borderless)
+                        }
+                    }
+                }
+            }
+            Section {
+                HStack {
+                    if session == model.session {
+                        Button(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill") { model.paused ? model.resume() : model.pause() }
+                        Button("Stop", systemImage: "stop.fill") { model.stopSession() }
+                    } else if let task = session.task {
+                        Button("Start Another Session", systemImage: "play.fill") { model.startSession(on: task) }
+                            .disabled(model.session != nil)
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
     }
 }

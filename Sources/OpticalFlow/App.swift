@@ -12,7 +12,6 @@ import UserNotifications
 //   APP_ACCENT=<id> OpticalFlow      run with another accent from Theme.all (UI/Theme.swift)
 //   APP_GRID=1 OpticalFlow           draw the 8 pt grid and the layout probes over the window
 
-@main
 struct OpticalFlowApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @State private var model = AppModel(container: Store.makeContainer())

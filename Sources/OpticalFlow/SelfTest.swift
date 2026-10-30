@@ -226,6 +226,18 @@ enum SelfTest {
         check("S-034 completing clears doing", !task.isDoing)
         model.undoComplete()
 
+        // S-036
+        model.sidebar = .sessions
+        model.selection = model.firstID(for: .sessions)
+        check("S-036 selecting a session shows it", model.selectedSession != nil && model.selectedTask == nil)
+        if let s = model.selectedSession {
+            let n = sessionCount()
+            model.deleteSession(s)
+            check("S-036 Delete removes the session", sessionCount() == n - 1 && model.selection == nil)
+        }
+        model.showTask(task)
+        check("S-036 Show Task selects the task on its page", model.selectedTask == task)
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)

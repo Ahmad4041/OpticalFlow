@@ -90,6 +90,24 @@ final class AppModel {
 
     var selectedTask: TaskItem? { selected(TaskItem.self) }
     var selectedRecording: Recording? { selected(Recording.self) }
+    var selectedSession: Session? { selected(Session.self) }
+
+    /// Shows a task on a page that lists it and selects it.
+    func showTask(_ task: TaskItem) {
+        if let project = task.project { sidebar = .project(project.uuid) }
+        else if task.isIn(.today) { sidebar = .list(.today) }
+        else if task.isIn(.someday) { sidebar = .list(.someday) }
+        else if task.isIn(.upcoming) { sidebar = .list(.upcoming) }
+        else { sidebar = .list(.inbox) }
+        selection = task.id
+    }
+
+    func deleteSession(_ session: Session) {
+        if session == self.session { stopSession() }
+        if selection == session.id { selection = nil }
+        context.delete(session)
+        save()
+    }
 
     /// The selected row as its type. nil for another type (SwiftData aborts on a typed lookup of the
     /// wrong entity) and nil once the row is deleted. A fetch, not `registeredModel`, because a row
@@ -246,7 +264,7 @@ final class AppModel {
     func firstID(for page: Page) -> PersistentIdentifier? {
         switch page {
         case .recordings: (try? context.fetch(FetchDescriptor<Recording>(sortBy: [SortDescriptor(\.startedAt, order: .reverse)])))?.first?.id
-        case .sessions: nil
+        case .sessions: (try? context.fetch(FetchDescriptor<Session>(sortBy: [SortDescriptor(\.startedAt, order: .reverse)])))?.first?.id
         default: tasks(for: page).first?.id
         }
     }

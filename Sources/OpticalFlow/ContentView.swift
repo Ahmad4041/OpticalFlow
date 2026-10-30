@@ -31,6 +31,8 @@ struct ContentView: View {
             if case .rename(let project) = model.projectPrompt { projectName = project.name }
         }
         .task {
+            AgentRouter.model = model
+            AgentSocket.listen { AgentRouter.handle($0) }
             SeedData.insertIfRequested(into: model)
             SelfTest.runIfRequested(model: model)
             Snapshot.runIfRequested(model: model, openSettings: openSettings)
@@ -176,6 +178,8 @@ struct DetailColumn: View {
             TaskDetail(task: task)
         } else if let recording = model.selectedRecording {
             RecordingDetail(recording: recording)
+        } else if let session = model.selectedSession {
+            SessionDetail(session: session)
         } else {
             ContentUnavailableView("No Selection", systemImage: "sidebar.right")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
