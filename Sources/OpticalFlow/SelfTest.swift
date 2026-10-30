@@ -285,6 +285,18 @@ enum SelfTest {
         model.delete(doomed)
         check("S-046 after delete the session has no task and reads safely", doomedSessions.first.map { $0.task == nil && ($0.task?.isDone ?? false) == false } == true)
 
+        // S-047: an AI job's answer lands on the tasks it touched.
+        guard let aiTask = model.addTask(title: "Agent target", on: .list(.inbox)) else { return check("S-047 add", false) }
+        let job = AgentJob(request: "make agent target urgent", orchestrator: .claude, contextTaskID: nil)
+        job.taskIDs = [String(aiTask.agentID.prefix(8))]
+        job.reply = "Done, it is urgent now."
+        job.finishedAt = .now
+        model.voice.jobs.append(job)
+        model.voice.attach(job)
+        check("S-047 the reply is written on the touched task", aiTask.agentReply == "Done, it is urgent now." && aiTask.agentReplyAt != nil)
+        check("S-047 finished jobs clear", { model.voice.clearFinishedJobs(); return model.voice.jobs.isEmpty }())
+        model.delete(aiTask)
+
         // S-043: subtasks.
         guard let steps = model.addTask(title: "Ship the release", on: .list(.inbox)) else { return check("S-043 add", false) }
         steps.subtasks = Checklist.parse("Tag it; Build; Upload")

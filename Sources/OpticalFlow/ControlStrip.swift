@@ -66,7 +66,7 @@ final class ControlStrip: NSObject, NSTouchBarDelegate {
 
     /// The app's mark, a ring with a dot, as a template image so the Touch Bar tints it.
     static let glyph: NSImage = {
-        let size = NSSize(width: 22, height: 22)
+        let size = NSSize(width: 22, height: 22)   // grid: ok Touch Bar image, not layout
         let image = NSImage(size: size, flipped: false) { rect in
             let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 3, dy: 3))
             ring.lineWidth = 2.2

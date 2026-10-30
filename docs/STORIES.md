@@ -384,6 +384,16 @@ Acceptance:
 UX: project names and recent task titles go to the recognizer as vocabulary; the AI prompt lists the projects.
 Status: done
 
+### S-047 AI works in the background
+As the user, a long AI request keeps running after I close the voice panel; a sparkles icon in the toolbar pulses while it runs, the card says "AI working on it", and when it finishes the answer appears on the card and in the detail, with a notification.
+Screens: board, voice
+Depends: S-041
+Acceptance:
+- [self] attach() writes the answer onto the tasks the job touched; finished jobs clear.
+- [snap] a card with an AI answer.
+UX: Toolbar sparkles open the list of jobs with steps, answers, Open and Stop. `opticalflow agent jobs` lists them.
+Status: done
+
 ### S-042 Hand a task to a sandboxed agent
 As the user, I hand a task with its notes to an agent that works on it in a sandbox for the long run, and see its progress and result on the card.
 Screens: board

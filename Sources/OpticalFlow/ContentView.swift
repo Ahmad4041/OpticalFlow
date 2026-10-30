@@ -105,6 +105,7 @@ struct ContentView: View {
             RecordingOptionsMenu()
             Button("Voice Command", systemImage: "mic.fill") { model.voice.toggle() }
                 .help("Say what to do: add, complete, start, set priority, add a note (Control-Option-Space)")
+            AgentActivityButton()
         }
     }
 }

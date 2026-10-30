@@ -148,6 +148,12 @@ struct TaskRow: View {
                     .labelStyle(.iconOnly)
                     .font(.caption)
             }
+            if task.agentReply?.isEmpty == false {
+                Image(systemName: "sparkles")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help(task.agentReply ?? "")
+            }
             if !task.subtasks.isEmpty {
                 let progress = Checklist.progress(task.subtasks)
                 Label("\(progress.done)/\(progress.total)", systemImage: "checklist")
@@ -229,6 +235,18 @@ struct TaskDetail: View {
             Section("Sessions") {
                 Toggle("Record the screen during sessions", isOn: $task.recordsSession)
                 Toggle("Doing (on the board)", isOn: $task.isDoing)
+            }
+            if let reply = task.agentReply, !reply.isEmpty {
+                Section {
+                    Text(reply).textSelection(.enabled)
+                    Button("Clear", systemImage: "xmark") { task.agentReply = nil; task.agentReplyAt = nil }
+                } header: {
+                    HStack {
+                        Label("AI", systemImage: "sparkles")
+                        Spacer()
+                        if let at = task.agentReplyAt { Text(at, format: .dateTime.hour().minute()).foregroundStyle(.secondary) }
+                    }
+                }
             }
             Section("Notes") {
                 TextEditor(text: $task.notes)

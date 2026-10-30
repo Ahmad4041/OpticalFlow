@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import CoreAudio
 import Speech
+import SwiftData
 import SwiftUI
 import OpticalFlowKit
 
@@ -58,6 +59,38 @@ enum Orchestrator: String, CaseIterable, Identifiable {
     }
 }
 
+/// One request handed to Claude Code or Codex. It runs in the background; the panel may close.
+@Observable
+final class AgentJob: Identifiable {
+    let id = UUID()
+    let request: String
+    let orchestrator: Orchestrator
+    let startedAt = Date.now
+    var finishedAt: Date?
+    var steps: [String] = []
+    var reply = ""
+    var error: String?
+    /// 8-character task ids the agent touched, read from its commands as they run.
+    var taskIDs: Set<String> = []
+    /// The task selected when the request was made, if any.
+    var contextTaskID: String?
+    @ObservationIgnored var process: Process?
+
+    init(request: String, orchestrator: Orchestrator, contextTaskID: String?) {
+        self.request = request
+        self.orchestrator = orchestrator
+        self.contextTaskID = contextTaskID
+    }
+
+    var running: Bool { finishedAt == nil }
+    var seconds: Int { Int((finishedAt ?? .now).timeIntervalSince(startedAt)) }
+
+    func cancel() {
+        process?.terminate()
+        if finishedAt == nil { error = "Stopped."; finishedAt = .now }
+    }
+}
+
 /// Control-Option-Space: listen, show the words, send them to the orchestrator, show its answer.
 /// Speech runs on this Mac when the language supports it.
 @Observable
@@ -75,6 +108,11 @@ final class VoiceAgent {
     var startedAt: Date?
     /// True after the last sentence was handled by the built-in parser.
     var handledLocally = false
+    /// Requests handed to the AI, newest last. They outlive the panel.
+    var jobs: [AgentJob] = []
+    /// The job the panel is showing.
+    var current: AgentJob?
+    var runningJobs: [AgentJob] { jobs.filter(\.running) }
     /// Off while a CLI probe listens, so nothing acts on noise.
     var autoSend = true
     /// What the last listen found, for `opticalflow agent diagnose`.
@@ -85,7 +123,6 @@ final class VoiceAgent {
     private let engine = AVAudioEngine()
     private var recognition: SFSpeechRecognitionTask?
     private var silence: Task<Void, Never>?
-    private var process: Process?
 
     init(model: AppModel) {
         self.model = model
@@ -123,10 +160,29 @@ final class VoiceAgent {
 
     func close() {
         stopListening()
-        process?.terminate()
-        busy = false
-        panel?.orderOut(nil)
+        panel?.orderOut(nil)   // a running job keeps going; the toolbar sparkles show it
     }
+
+    /// Shows a job in the panel (from the toolbar list).
+    func show(job: AgentJob) {
+        show(listening: false)
+        current = job
+        transcript = job.request
+        handledLocally = false
+        mirror(job)
+    }
+
+    /// Copies a job's progress into the panel state when it is the one on screen.
+    private func mirror(_ job: AgentJob) {
+        guard current === job else { return }
+        steps = job.steps
+        reply = job.reply
+        error = job.error
+        busy = job.running
+        startedAt = job.startedAt
+    }
+
+    func clearFinishedJobs() { jobs.removeAll { !$0.running } }
 
     // MARK: Speech
 
@@ -256,6 +312,7 @@ final class VoiceAgent {
         json["hotkeyTaken"] = Hotkey.voiceTaken
         json["steps"] = steps
         json["handledLocally"] = handledLocally
+        json["jobs"] = jobs.map { ["request": $0.request, "running": $0.running, "steps": $0.steps, "reply": $0.reply, "error": $0.error ?? "", "tasks": Array($0.taskIDs)] as [String: Any] }
         json["microphones"] = Microphone.devices().map(\.name)
         json["microphone"] = Microphone.active?.name ?? "system default"
         if let panel {
@@ -298,7 +355,7 @@ final class VoiceAgent {
     func send(_ text: String) {
         stopListening()
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty, !busy else { return }
+        guard !clean.isEmpty else { return }
         transcript = clean
         error = nil
         reply = ""
@@ -322,18 +379,41 @@ final class VoiceAgent {
             }
         }
         handledLocally = false
-        busy = true
-        startedAt = .now
+        let job = AgentJob(request: clean, orchestrator: orchestrator, contextTaskID: model.selectedTask.map { String($0.agentID.prefix(8)) })
+        jobs.append(job)
+        current = job
+        mirror(job)
         let prompt = prompt(for: clean)
-        let which = orchestrator
         Task { [weak self] in
+            guard let self else { return }
             do {
-                let answer = try await self?.run(which, prompt: prompt) ?? ""
-                self?.reply = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+                try await self.run(job, prompt: prompt)
             } catch {
-                self?.error = error.localizedDescription
+                job.error = error.localizedDescription
             }
-            self?.busy = false
+            job.finishedAt = .now
+            self.attach(job)
+            self.mirror(job)
+        }
+    }
+
+    /// Writes the job's answer onto the tasks it touched (ids in its commands, the selected task,
+    /// and tasks it created), and tells the user when the panel is closed.
+    func attach(_ job: AgentJob) {
+        var ids = job.taskIDs
+        if let context = job.contextTaskID { ids.insert(context) }
+        let all = (try? model.context.fetch(FetchDescriptor<TaskItem>())) ?? []
+        var touched = all.filter { task in ids.contains(String(task.agentID.prefix(8))) || task.createdAt >= job.startedAt }
+        if touched.isEmpty, let context = model.selectedTask { touched = [context] }
+        let text = job.error ?? job.reply
+        guard !text.isEmpty else { return }
+        for task in touched {
+            task.agentReply = text
+            task.agentReplyAt = .now
+        }
+        model.save()
+        if !Store.isOverridden, !isShown || current !== job {
+            Notifier.post(job.error == nil ? "AI done" : "AI could not finish", text)
         }
     }
 
@@ -350,7 +430,8 @@ final class VoiceAgent {
         """
     }
 
-    private func run(_ which: Orchestrator, prompt: String) async throws -> String {
+    private func run(_ job: AgentJob, prompt: String) async throws {
+        let which = job.orchestrator
         guard let path = which.path else { throw VoiceError.notInstalled(which.title) }
         let workdir = Store.isOverridden ? "/tmp/OpticalFlow-agent"
             : FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appending(path: "OpticalFlow/agent").path
@@ -368,23 +449,27 @@ final class VoiceAgent {
         process.standardError = err
         process.standardInput = FileHandle.nullDevice
         try process.run()
-        self.process = process
+        job.process = process
         nonisolated(unsafe) let errHandle = err.fileHandleForReading
         async let stderr = Task.detached { errHandle.readDataToEndOfFile() }.value
         // Both agents stream one JSON event per line; each command they run becomes a step on screen.
         var answer = ""
         for try await line in out.fileHandleForReading.bytes.lines {
             guard let data = line.data(using: .utf8), let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
-            if let step = Self.step(in: event), steps.last != step { steps.append(step) }   // the stream repeats a message event
+            if let step = Self.step(in: event), job.steps.last != step {   // the stream repeats a message event
+                job.steps.append(step)
+                for match in step.matches(of: /\b[0-9a-f]{8}\b/) { job.taskIDs.insert(String(match.output)) }
+                mirror(job)
+            }
             if let final = Self.answer(in: event) { answer = final }
         }
         let errors = String(decoding: await stderr, as: UTF8.self)
         process.waitUntilExit()
-        self.process = nil
+        job.process = nil
         guard process.terminationStatus == 0 || !answer.isEmpty else {
             throw VoiceError.failed(which.title, errors.split(separator: "\n").suffix(3).joined(separator: " "))
         }
-        return answer
+        job.reply = answer.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// A command the agent ran, as a short line: "tasks update 3f2a --priority high".
@@ -550,7 +635,7 @@ struct VoiceView: View {
 
     private func footer(_ voice: VoiceAgent) -> String {
         if voice.listening { return "Pause to send, or press Return. Escape cancels." }
-        if voice.busy { return "\(voice.orchestrator.title) is running opticalflow commands. Escape stops it." }
+        if voice.busy { return "\(voice.orchestrator.title) is working. Escape closes this; the result lands on the task and under the toolbar sparkles." }
         return "Clear commands run at once. Longer requests go to \(voice.orchestrator.title). Settings > Agent."
     }
 }
@@ -649,5 +734,69 @@ struct MicrophonePicker: View {
         .onChange(of: uid) { Microphone.preferredUID = uid }
         .onAppear { devices = Microphone.devices(); uid = Microphone.preferredUID }
         .help("Used by the voice panel and by screen recordings")
+    }
+}
+
+/// Toolbar sparkles: pulses while a job runs; click for the list of jobs.
+struct AgentActivityButton: View {
+    @Environment(AppModel.self) private var model
+    @State private var shown = false
+
+    var body: some View {
+        let voice = model.voice
+        let running = voice.runningJobs.count
+        if !voice.jobs.isEmpty {
+            Button {
+                shown.toggle()
+            } label: {
+                Label(running > 0 ? "AI working" : "AI results", systemImage: "sparkles")
+                    .symbolEffect(.pulse, isActive: running > 0)
+                    .foregroundStyle(running > 0 ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            }
+            .help(running > 0 ? "\(running) AI request\(running == 1 ? "" : "s") running in the background" : "AI results")
+            .popover(isPresented: $shown, arrowEdge: .bottom) {
+                AgentJobsList()
+                    .environment(model)
+                    .frame(width: 360)
+            }
+        }
+    }
+}
+
+struct AgentJobsList: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let voice = model.voice
+        VStack(alignment: .leading, spacing: Space.sm) {
+            ForEach(voice.jobs.reversed()) { job in
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(spacing: Space.sm) {
+                        Image(systemName: job.running ? "sparkles" : job.error == nil ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(job.running ? AnyShapeStyle(.tint) : job.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+                            .symbolEffect(.pulse, isActive: job.running)
+                        Text(job.request).lineLimit(2)
+                        Spacer()
+                        Text(job.running ? "\(job.seconds) s" : job.orchestrator.title).font(.caption).foregroundStyle(.tertiary)
+                    }
+                    ForEach(Array(job.steps.enumerated()), id: \.offset) { _, step in
+                        Text(step).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    }
+                    if !job.reply.isEmpty || job.error != nil {
+                        Text(job.error ?? job.reply).font(.callout).textSelection(.enabled)
+                    }
+                    HStack {
+                        Button("Open") { voice.show(job: job) }.buttonStyle(.link)
+                        if job.running { Button("Stop") { job.cancel() }.buttonStyle(.link) }
+                    }
+                    .font(.caption)
+                }
+                .padding(.vertical, Space.xs)
+                Divider()
+            }
+            Button("Clear finished") { voice.clearFinishedJobs() }
+                .disabled(voice.jobs.allSatisfy(\.running))
+        }
+        .padding(Space.lg)
     }
 }

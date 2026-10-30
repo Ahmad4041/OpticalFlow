@@ -41,6 +41,8 @@ enum SeedData {
         login.isDoing = true
         login.recordsSession = true
         login.priority = .high
+        login.agentReply = "Moved to Doing and set to high priority. The repro note is attached."
+        login.agentReplyAt = .now.addingTimeInterval(-600)
         login.subtasks = [ChecklistItem(title: "Reproduce with a fresh profile", isDone: true),
                            ChecklistItem(title: "Write the regression test"),
                            ChecklistItem(title: "Fix the redirect")]

@@ -109,6 +109,10 @@ struct BoardCard: View {
     private var firstNoteLine: String? {
         task.notes.split(whereSeparator: \.isNewline).first.map(String.init)
     }
+    private var aiWorking: Bool {
+        let id = String(task.agentID.prefix(8))
+        return model.voice.runningJobs.contains { $0.taskIDs.contains(id) || $0.contextTaskID == id }
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: Space.sm) {
@@ -137,6 +141,18 @@ struct BoardCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
+                }
+                if aiWorking {
+                    Label("AI working on it", systemImage: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.tint)
+                        .symbolEffect(.pulse)
+                } else if let reply = task.agentReply, !reply.isEmpty {
+                    Label(reply, systemImage: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .help(task.agentReplyAt.map { "AI, \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "AI")
                 }
                 if progress.total > 0 {
                     HStack(spacing: Space.sm) {

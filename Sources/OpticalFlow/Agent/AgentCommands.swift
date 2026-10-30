@@ -281,6 +281,10 @@ enum AgentCommands {
             model.voice.transcribe(file: URL(fileURLWithPath: try args.required("file")))
             return ["started": true]
         },
+        AgentCommand(name: "agent jobs", summary: "AI requests running or finished in the background, with their steps and answers.",
+                     example: "opticalflow agent jobs --json", readOnly: true) { _, model in
+            ["jobs": model.voice.state["jobs"] ?? []]
+        },
         AgentCommand(name: "agent close", summary: "Stop listening and close the voice panel.",
                      example: "opticalflow agent close --json") { _, model in
             model.voice.close()

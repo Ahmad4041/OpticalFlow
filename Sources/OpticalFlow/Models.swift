@@ -55,6 +55,9 @@ final class TaskItem {
     var checklist: [ChecklistItem]?
     /// When a clock time was given with the due date, views show it.
     var hasDueTime: Bool = false
+    /// What the AI agent last said about this task, and when. Optional: added after the first stores.
+    var agentReply: String?
+    var agentReplyAt: Date?
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?
