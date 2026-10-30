@@ -78,6 +78,10 @@ struct OpticalFlowApp: App {
                 Button(model.recorder.isRecording ? "Stop Recording" : "Record Screen…") { model.toggleRecording() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
             }
+            CommandGroup(after: .windowArrangement) {
+                Button(model.miniTimer.isShown ? "Hide Mini Timer" : "Show Mini Timer") { model.miniTimer.toggle() }
+                    .keyboardShortcut("m", modifiers: [.command, .option])
+            }
             CommandGroup(after: .sidebar) {
                 Divider()
                 ForEach(Array(Page.fixed.enumerated()), id: \.offset) { index, page in

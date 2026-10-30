@@ -51,6 +51,20 @@ enum Snapshot {
                 }
                 model.quickEntry.close()
             }
+            if only == nil || only?.contains("minitimer") == true {
+                model.selection = model.firstID(for: .list(.today))
+                model.startSession()
+                model.miniTimer.show()
+                try? await Task.sleep(for: .seconds(0.8))
+                let mini = NSApp.windows.first { $0.frameAutosaveName == "MiniTimer" }
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.4))
+                    capture(to: "\(dir)/minitimer-\(mode).png", window: mini)
+                }
+                model.miniTimer.hide()
+                model.stopSession()
+            }
             if only == nil || only?.contains("settings") == true {
                 let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
                 openSettings()

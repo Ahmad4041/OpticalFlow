@@ -74,6 +74,8 @@ struct MenuBarPanel: View {
             }
             Divider()
             HStack {
+                Button("Mini Timer") { model.miniTimer.toggle() }
+                Spacer()
                 Button("Open OpticalFlow") {
                     NSApp.activate()
                     openWindow(id: "main")
