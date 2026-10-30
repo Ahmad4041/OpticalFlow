@@ -67,3 +67,8 @@ Rule: Any long-running capture shows a visible control to stop it without huntin
 Cause: the test instance bound the agent socket at the default path, which the running app already owned; `listen` unlinked and rebound it and the two instances contended before the main view's task got to the snapshot code.
 Fix: `tools/snap.sh` and `tools/selftest.sh` set `APP_AGENT_SOCKET` to a /tmp path, as `check-agent-cli.sh` already did.
 Rule: Every test launch isolates every shared resource the app opens: the store, the movie folder, and the socket.
+
+## 2026-10-31 Voice panel heard nothing; recordings had silent audio
+The built-in "MacBook Pro Microphone" on this Mac delivers 48 kHz float buffers of exact zeros to every app; the HyperX QuadCast S delivers signal. Both the voice panel and ScreenCaptureKit read the system default input, so both were silent while permissions were fine. Found by measuring the peak sample level in the tap (`opticalflow agent state`) and by recognizing a generated file (`agent transcribe`), which separated the microphone from recognition.
+Fix: a Microphone preference (Settings > Agent and > Recording) that the audio engine and `SCStreamConfiguration.microphoneCaptureDeviceID` both use; the panel warns after two seconds of zeros.
+Rule: when audio is silent, measure the input level before blaming permissions, and let people choose the device; the system default is not always the one that works.

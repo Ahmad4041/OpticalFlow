@@ -351,7 +351,7 @@ Acceptance:
 - [unit] VoiceIntent.parse maps add, complete, start, stop, priority, and note phrasings; anything else is a new task.
 - [self] perform() adds with a date, sets priority, appends a note, starts and stops a session, completes, and reports a miss without changing anything.
 - [self] `opticalflow agent say "…"` runs the same path, so a Shortcut with Dictate Text works too.
-UX: On-device speech when the language supports it; a pause sends. Orchestrator in Settings > Agent: Built in (no AI), Claude Code (`claude -p`, only the opticalflow command allowed), or Codex (`codex exec`, workspace sandbox). ChatGPT has no command line on the Mac, so it is not offered.
+UX: On-device speech when the language supports it; a pause sends. Microphone picker in Settings > Agent, shared with recordings; the panel says when a microphone is silent. Orchestrator in Settings > Agent: Built in (no AI), Claude Code (`claude -p`, only the opticalflow command allowed), or Codex (`codex exec`, workspace sandbox). ChatGPT has no command line on the Mac, so it is not offered.
 Status: done
 
 ### S-043 Subtasks and richer cards

@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import CoreAudio
 import Speech
 import SwiftUI
 import OpticalFlowKit
@@ -156,14 +157,37 @@ final class VoiceAgent {
         request.requiresOnDeviceRecognition = false
         request.addsPunctuation = true
         let input = engine.inputNode
+        Microphone.apply(to: engine)
         let format = input.outputFormat(forBus: 0)
-        diagnostics["inputFormat"] = "\(Int(format.sampleRate)) Hz, \(format.channelCount) ch"
+        diagnostics["inputFormat"] = "\(Int(format.sampleRate)) Hz, \(format.channelCount) ch, \(format.commonFormat == .pcmFormatFloat32 ? "float" : "int")"
+        diagnostics["inputDevice"] = Microphone.active?.name ?? ((AVCaptureDevice.default(for: .audio)?.localizedName ?? "none") + " (system default)")
         guard format.sampleRate > 0, format.channelCount > 0 else {
             error = "No microphone input device. Pick one in System Settings > Sound > Input. You can type instead."
             return
         }
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { @Sendable buffer, _ in request.append(buffer) }
+        nonisolated(unsafe) var peak: Float = 0
+        nonisolated(unsafe) var buffers = 0
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { @Sendable [weak self] buffer, _ in
+            request.append(buffer)
+            // Loudest sample so far, so a silent transcript can be told apart from a silent microphone.
+            if let data = buffer.floatChannelData?[0] {
+                for i in 0..<Int(buffer.frameLength) { peak = max(peak, abs(data[i])) }
+            }
+            buffers += 1
+            if buffers % 20 == 0 {
+                let level = peak, count = buffers
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.diagnostics["inputPeak"] = String(format: "%.4f", level)
+                    self.diagnostics["inputBuffers"] = "\(count)"
+                    // Two seconds of exact zeros is a dead or muted microphone, not a quiet room.
+                    if count == 80, level == 0, self.listening, self.error == nil {
+                        self.error = "The microphone “\(self.diagnostics["inputDevice"] ?? "")” is silent. Pick another in Settings > Agent, or type instead."
+                    }
+                }
+            }
+        }
         engine.prepare()
         do { try engine.start() } catch {
             self.error = "No microphone input: \(error.localizedDescription)"
@@ -196,6 +220,23 @@ final class VoiceAgent {
         }
     }
 
+    /// Diagnosis: recognizes a sound file, to tell a microphone problem from a recognition problem.
+    func transcribe(file: URL) {
+        guard let recognizer = SFSpeechRecognizer(locale: .current) ?? SFSpeechRecognizer() else { diagnostics["fileTranscript"] = "no recognizer"; return }
+        diagnostics["fileTranscript"] = "pending"
+        let request = SFSpeechURLRecognitionRequest(url: file)
+        request.requiresOnDeviceRecognition = false
+        recognizer.recognitionTask(with: request) { @Sendable [weak self] result, error in
+            let text = result?.bestTranscription.formattedString
+            let final = result?.isFinal ?? false
+            let failure = (error as NSError?).map { "\($0.domain) \($0.code): \($0.localizedDescription)" }
+            Task { @MainActor in
+                if let text, final || self?.diagnostics["fileTranscript"] == "pending" { self?.diagnostics["fileTranscript"] = text }
+                if let failure { self?.diagnostics["fileError"] = failure }
+            }
+        }
+    }
+
     /// For the CLI: what the last listen saw.
     var state: [String: Any] {
         var json: [String: Any] = diagnostics
@@ -204,6 +245,18 @@ final class VoiceAgent {
         json["transcript"] = transcript
         json["reply"] = reply
         json["orchestrator"] = orchestrator.rawValue
+        json["hotkeyTaken"] = Hotkey.voiceTaken
+        json["microphones"] = Microphone.devices().map(\.name)
+        json["microphone"] = Microphone.active?.name ?? "system default"
+        if let panel {
+            json["panelVisible"] = panel.isVisible
+            json["panelFrame"] = "\(Int(panel.frame.origin.x)),\(Int(panel.frame.origin.y)) \(Int(panel.frame.width))x\(Int(panel.frame.height))"
+            json["panelOnScreen"] = panel.screen != nil
+            json["panelKey"] = panel.isKeyWindow
+        } else {
+            json["panelVisible"] = false
+        }
+        json["screens"] = NSScreen.screens.map { "\(Int($0.frame.origin.x)),\(Int($0.frame.origin.y)) \(Int($0.frame.width))x\(Int($0.frame.height))" }
         if let error { json["error"] = error }
         return json
     }
@@ -377,5 +430,65 @@ struct VoiceView: View {
         .padding(Space.xl)
         .frame(width: 520)
         .onAppear { focused = true }
+    }
+}
+
+/// Which microphone the voice panel and the screen recorder read. nil follows the system default.
+enum Microphone {
+    static var preferredUID: String? {
+        get { UserDefaults.standard.string(forKey: "microphone.uid") }
+        set { UserDefaults.standard.set(newValue, forKey: "microphone.uid") }
+    }
+
+    /// (uid, name) for every input device.
+    static func devices() -> [(uid: String, name: String)] {
+        AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone, .external], mediaType: .audio, position: .unspecified)
+            .devices.map { ($0.uniqueID, $0.localizedName) }
+    }
+
+    /// The preferred device when it is present, else nil (the system default).
+    static var active: (uid: String, name: String)? {
+        guard let uid = preferredUID else { return nil }
+        return devices().first { $0.uid == uid }
+    }
+
+    /// CoreAudio id for a device uid.
+    static func deviceID(for uid: String) -> AudioDeviceID? {
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
+                                                 mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var cfUID = uid as CFString
+        var deviceID = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let status = withUnsafeMutablePointer(to: &cfUID) { uidPointer in
+            AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address,
+                                       UInt32(MemoryLayout<CFString>.size), uidPointer, &size, &deviceID)
+        }
+        return status == noErr && deviceID != 0 ? deviceID : nil
+    }
+
+    /// Points an audio engine's input at the preferred device. Call before the engine starts.
+    static func apply(to engine: AVAudioEngine) {
+        guard let active, let id = deviceID(for: active.uid), let unit = engine.inputNode.audioUnit else { return }
+        var deviceID = id
+        AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
+                             &deviceID, UInt32(MemoryLayout<AudioDeviceID>.size))
+    }
+}
+
+/// System default or one input device. Shared by Settings > Agent and Settings > Sessions > Recording.
+struct MicrophonePicker: View {
+    @State private var uid: String? = Microphone.preferredUID
+    @State private var devices = Microphone.devices()
+
+    var body: some View {
+        Picker("Microphone", selection: $uid) {
+            Text("System default").tag(String?.none)
+            ForEach(devices, id: \.uid) { device in
+                Text(device.name).tag(Optional(device.uid))
+            }
+        }
+        .onChange(of: uid) { Microphone.preferredUID = uid }
+        .onAppear { devices = Microphone.devices(); uid = Microphone.preferredUID }
+        .help("Used by the voice panel and by screen recordings")
     }
 }

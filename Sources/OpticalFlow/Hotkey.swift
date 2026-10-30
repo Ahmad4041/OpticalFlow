@@ -5,6 +5,8 @@ enum Hotkey {
     private static var actions: [UInt32: () -> Void] = [:]
     private static var refs: [EventHotKeyRef?] = []
     private static var installed = false
+    /// Ids the system refused, usually because another app owns the same keys.
+    private(set) static var taken: Set<UInt32> = []
 
     /// Registers one hotkey. Call once per key; a repeat for the same id replaces the action.
     static func register(id: UInt32, keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
@@ -24,8 +26,9 @@ enum Hotkey {
         actions[id] = action
         guard isNew else { return }
         var ref: EventHotKeyRef?
-        RegisterEventHotKey(keyCode, modifiers, EventHotKeyID(signature: OSType(0x4F46_4C57), id: id),
-                            GetApplicationEventTarget(), 0, &ref)
+        let status = RegisterEventHotKey(keyCode, modifiers, EventHotKeyID(signature: OSType(0x4F46_4C57), id: id),
+                                         GetApplicationEventTarget(), 0, &ref)
+        if status != noErr { taken.insert(id) }
         refs.append(ref)
     }
 
@@ -38,6 +41,8 @@ enum Hotkey {
     static func registerVoice(_ action: @escaping () -> Void) {
         register(id: 3, keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey | optionKey), action: action)
     }
+
+    static var voiceTaken: Bool { taken.contains(3) }
 
     /// Control-Space: the quick-entry panel.
     static func registerQuickEntry(_ action: @escaping () -> Void) {

@@ -256,9 +256,15 @@ enum AgentCommands {
         },
 
         AgentCommand(name: "agent listen", summary: "Open the voice panel and listen. With --probe nothing is sent; read the result with agent state.",
-                     params: [.init(name: "probe", kind: .boolean, help: "listen without acting, for diagnosis")],
+                     params: [.init(name: "probe", kind: .boolean, help: "listen without acting, for diagnosis"),
+                              .init(name: "microphone", help: "words from a microphone's name, or \"default\"; remembered for recordings too")],
                      example: "opticalflow agent listen --probe --json") { args, model in
             let probe = try args.bool("probe") == true
+            if let name = args.string("microphone") {
+                if name == "default" { Microphone.preferredUID = nil }
+                else if let device = Microphone.devices().first(where: { $0.name.localizedCaseInsensitiveContains(name) }) { Microphone.preferredUID = device.uid }
+                else { throw AgentError.invalid("no microphone matches \"\(name)\": \(Microphone.devices().map(\.name).joined(separator: ", "))") }
+            }
             model.voice.show(listening: false)
             model.voice.autoSend = !probe
             Task { await model.voice.startListening() }
@@ -267,6 +273,12 @@ enum AgentCommands {
         AgentCommand(name: "agent state", summary: "Permissions, availability, transcript, and errors of the voice agent.",
                      example: "opticalflow agent state --json", readOnly: true) { _, model in
             model.voice.state
+        },
+        AgentCommand(name: "agent transcribe", summary: "Diagnosis: recognize speech in a sound file; read the result with agent state.",
+                     params: [.init(name: "file", required: true, positional: true, help: "an audio file path")],
+                     example: "opticalflow agent transcribe /tmp/test.aiff --json") { args, model in
+            model.voice.transcribe(file: URL(fileURLWithPath: try args.required("file")))
+            return ["started": true]
         },
         AgentCommand(name: "agent close", summary: "Stop listening and close the voice panel.",
                      example: "opticalflow agent close --json") { _, model in

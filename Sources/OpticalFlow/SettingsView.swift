@@ -79,6 +79,7 @@ struct GeneralSettings: View {
         }
         Section("Recording") {
             Toggle("Microphone on", isOn: $recorder.micEnabled)
+            MicrophonePicker()
             Toggle("Camera on, as a second file", isOn: $recorder.cameraEnabled)
             Toggle("Follow the pointer to another display", isOn: $recorder.followsDisplay)
                 .help("When you record a whole display and move the pointer to another one, the recording switches there. Asks for Screen Recording permission once.")
@@ -103,7 +104,23 @@ struct AgentSettings: View {
                         .selectionDisabled(!which.isInstalled)
                 }
             }
-            LabeledContent("Speak anywhere", value: "⌃⌥Space")
+            MicrophonePicker()
+            LabeledContent("Speak anywhere") {
+                VStack(alignment: .trailing, spacing: Space.xs) {
+                    Text("⌃⌥Space")
+                    if Hotkey.voiceTaken {
+                        Text("Another app owns this shortcut. Use the toolbar microphone, File > Voice Command, or the menu bar timer.")
+                            .font(.callout)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.trailing)
+                    } else {
+                        Text("Also: the toolbar microphone, File > Voice Command, the menu bar timer.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+            }
             Text(model.voice.orchestrator.blurb)
                 .font(.callout)
                 .foregroundStyle(.secondary)

@@ -102,6 +102,8 @@ struct ContentView: View {
             .tint(model.recorder.isRecording ? .red : nil)
             .help(model.recorder.isRecording ? "Stop recording" : "Record the screen (Shift-Command-R)")
             RecordingOptionsMenu()
+            Button("Voice Command", systemImage: "mic.fill") { model.voice.toggle() }
+                .help("Say what to do: add, complete, start, set priority, add a note (Control-Option-Space)")
         }
     }
 }

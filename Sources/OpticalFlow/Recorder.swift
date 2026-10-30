@@ -110,6 +110,7 @@ final class Recorder {
             lastError = "No microphone: allow OpticalFlow in System Settings > Privacy & Security > Microphone."
         }
         config.captureMicrophone = micEnabled && AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        if let uid = Microphone.active?.uid { config.microphoneCaptureDeviceID = uid }
         config.excludesCurrentProcessAudio = true
         config.queueDepth = 6
 
