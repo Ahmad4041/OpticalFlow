@@ -81,7 +81,7 @@ struct RecordingDetail: View {
             }
             Section("Preview") {
                 if let player {
-                    VideoPlayer(player: player)
+                    PlayerView(player: player)
                         .aspectRatio(16 / 9, contentMode: .fit)
                         .frame(maxWidth: .infinity)
                     HStack {
@@ -188,5 +188,23 @@ struct RecordingThumbnail: View {
                 image = made
             }
         }
+    }
+}
+
+/// AVKit's AppKit player, wrapped by hand. SwiftUI's VideoPlayer (_AVKit_SwiftUI) aborts in
+/// getSuperclassMetadata when loaded from a Swift package build; AVPlayerView does not.
+struct PlayerView: NSViewRepresentable {
+    let player: AVPlayer
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .inline
+        view.showsFullScreenToggleButton = false
+        view.player = player
+        return view
+    }
+
+    func updateNSView(_ view: AVPlayerView, context: Context) {
+        if view.player !== player { view.player = player }
     }
 }

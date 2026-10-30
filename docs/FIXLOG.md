@@ -35,3 +35,9 @@ Symptom: SIGABRT in `AppModel.selected<A>()` from the Task menu, right after sel
 Cause: `ModelContext.registeredModel(for:) as T?` aborts instead of returning nil when the id belongs to another entity. The previous fix for deleted rows introduced this.
 Fix: check `PersistentIdentifier.entityName` against the requested type before the typed lookup.
 Rule: A typed SwiftData lookup needs an entity check first; `as T?` on SwiftData APIs is not a safe cast.
+
+## 2026-10-31 Crash (getSuperclassMetadata abort) when opening a recording with a file
+Symptom: SIGABRT inside `_AVKit_SwiftUI` while SwiftUI laid out the recording detail.
+Cause: SwiftUI's `VideoPlayer` is a generic over AVKit's `AVPlayerView`; in this Swift package build its superclass metadata is not resolvable at runtime and the Swift runtime aborts. Snapshots never caught it because the seed recording had no file, so the player branch never rendered.
+Fix: a hand-written `NSViewRepresentable` around `AVPlayerView`. Seed data now writes a real 4 s clip so the player renders in every snapshot run.
+Rule: Seed data must exercise every branch a page can show; a branch that snapshots never render is untested.

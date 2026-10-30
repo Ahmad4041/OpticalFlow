@@ -59,7 +59,13 @@ enum SeedData {
         second.seconds = 1_710
         context.insert(second)
 
-        let recording = Recording(url: Recorder.directory.appending(path: "2026-10-28 14.02.11.mp4"), session: second)
+        let recordingURL = Recorder.directory.appending(path: "2026-10-28 14.02.11.mp4")
+        // A real short clip, so the detail's player and the row's thumbnail render in snapshots.
+        Task {
+            try? FileManager.default.createDirectory(at: Recorder.directory, withIntermediateDirectories: true)
+            try? await TestVideo.make(at: recordingURL, seconds: 4)
+        }
+        let recording = Recording(url: recordingURL, session: second)
         recording.startedAt = second.startedAt
         recording.duration = 1_710
         recording.cameraPath = Recorder.directory.appending(path: "2026-10-28 14.02.11-camera.mov").path
