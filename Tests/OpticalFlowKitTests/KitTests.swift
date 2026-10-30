@@ -104,3 +104,15 @@ func cleans(_ input: String, expected: String?) {
     #expect(CursorTrack.normalize(CGPoint(x: 3200, y: 720), in: rect) == CGPoint(x: 0.5, y: 0.5))
     #expect(CursorTrack.normalize(CGPoint(x: 100, y: 5000), in: rect) == CGPoint(x: 0, y: 1))
 }
+
+@Test func sessionStats() {
+    let cal = Calendar.current
+    let now = cal.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 12))!
+    let days = SessionStats.perDay([(now, 1500), (now.addingTimeInterval(-3600), 600), (cal.date(byAdding: .day, value: -2, to: now)!, 900)], now: now)
+    #expect(days.count == 7)
+    #expect(days.last?.seconds == 2100)
+    #expect(days[4].seconds == 900)
+    #expect(days.reduce(0) { $0 + $1.seconds } == 3000)
+    #expect(SessionStats.hours(3900) == "1h 05m")
+    #expect(SessionStats.hours(2700) == "45m")
+}

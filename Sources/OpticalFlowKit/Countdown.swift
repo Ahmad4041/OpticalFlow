@@ -18,3 +18,27 @@ public enum Countdown {
         return String(format: padded ? "%02d:%02d" : "%d:%02d", m, sec)
     }
 }
+
+/// Totals for the Sessions page.
+public enum SessionStats {
+    public struct Day: Equatable, Sendable {
+        public var date: Date
+        public var seconds: Int
+    }
+
+    /// Worked seconds for each of the last `days` days (oldest first), from (start, seconds) pairs.
+    public static func perDay(_ sessions: [(Date, Int)], days: Int = 7, now: Date = .now, calendar: Calendar = .current) -> [Day] {
+        let today = calendar.startOfDay(for: now)
+        return (0..<days).reversed().map { back in
+            let day = calendar.date(byAdding: .day, value: -back, to: today)!
+            let total = sessions.filter { calendar.isDate($0.0, inSameDayAs: day) }.reduce(0) { $0 + $1.1 }
+            return Day(date: day, seconds: total)
+        }
+    }
+
+    /// "1h 05m", "45m", "0m".
+    public static func hours(_ seconds: Int) -> String {
+        let h = seconds / 3600, m = (seconds % 3600) / 60
+        return h > 0 ? String(format: "%dh %02dm", h, m) : "\(m)m"
+    }
+}

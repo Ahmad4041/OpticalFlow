@@ -43,6 +43,13 @@ final class AppModel {
     /// Tests only.
     var idleOverride: TimeInterval?
     let recorder = Recorder()
+    @ObservationIgnored private var _miniTimer: MiniTimer?
+    var miniTimer: MiniTimer {
+        if let _miniTimer { return _miniTimer }
+        let timer = MiniTimer(model: self)
+        _miniTimer = timer
+        return timer
+    }
     @ObservationIgnored private var _quickEntry: QuickEntry?
     var quickEntry: QuickEntry {
         if let _quickEntry { return _quickEntry }
@@ -387,6 +394,7 @@ final class AppModel {
         case "resume": resume()
         case "break": startBreak(minutes: Int(query["minutes"] ?? "") ?? 5)
         case "record": toggleRecording()
+        case "mini": miniTimer.toggle()
         case "add": addTask(title: query["title"] ?? "", on: .list(.inbox))
         default: return false
         }

@@ -281,8 +281,24 @@ Acceptance:
 - [manual] A Shortcuts automation "When Work Focus turns on → Open URL opticalflow://start" starts a session.
 UX: URL scheme instead of App Intents, because App Intents metadata needs an Xcode project (see new-mac-app skill); the commands are listed in Settings > Sessions. ponytail: move to App Intents when the project goes XcodeGen.
 Status: done
-### S-021 Always-on-top mini timer window. Status: todo
-### S-022 Daily and weekly session stats. Status: todo
+### S-021 Always-on-top mini timer
+As the user, I show a small floating timer with pause and stop, so the countdown stays visible when the menu bar is crowded or hidden.
+Screens: minitimer
+Depends: S-005
+Acceptance:
+- [self] Window > Show Mini Timer (Option-Command-M) shows a floating panel; the same command hides it.
+- [snap] A 220 pt wide panel: big countdown, task title, pause and stop.
+UX: A non-activating utility panel on every Space, position remembered. Also from the menu bar panel and opticalflow://mini.
+Status: done
+### S-022 Daily and weekly session stats
+As the user, I open Sessions and see today's and this week's focused time with a seven-day bar strip.
+Screens: sessions
+Depends: S-006
+Acceptance:
+- [unit] SessionStats.perDay buckets sessions into the last seven days, oldest first; hours() formats "1h 05m" and "45m".
+- [snap] A stats row above the session list: Today, This week, and seven bars with weekday initials, today in the accent.
+UX: Bars are plain rounded rectangles with hover help; no chart library. The running session counts live.
+Status: done
 
 ## M6 Polish
 ### S-023 Drag tasks between lists and projects. Status: todo

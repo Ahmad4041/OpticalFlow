@@ -186,6 +186,12 @@ enum SelfTest {
         check("S-020 an unknown command is refused", !model.handle(URL(string: "opticalflow://dance")!))
         model.selection = task.id
 
+        // S-021
+        model.miniTimer.show()
+        check("S-021 the mini timer shows as a floating panel", model.miniTimer.isShown)
+        model.miniTimer.hide()
+        check("S-021 and hides", !model.miniTimer.isShown)
+
         // S-008
         let recording = Recording(url: URL(fileURLWithPath: "/tmp/OpticalFlow-movies/selftest.mp4"), session: nil)
         recording.startedAt = Date.now.addingTimeInterval(-95)
