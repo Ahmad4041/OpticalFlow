@@ -41,3 +41,9 @@ Symptom: SIGABRT inside `_AVKit_SwiftUI` while SwiftUI laid out the recording de
 Cause: SwiftUI's `VideoPlayer` is a generic over AVKit's `AVPlayerView`; in this Swift package build its superclass metadata is not resolvable at runtime and the Swift runtime aborts. Snapshots never caught it because the seed recording had no file, so the player branch never rendered.
 Fix: a hand-written `NSViewRepresentable` around `AVPlayerView`. Seed data now writes a real 4 s clip so the player renders in every snapshot run.
 Rule: Seed data must exercise every branch a page can show; a branch that snapshots never render is untested.
+
+## 2026-10-31 Recording detail showed "No Selection" with a row highlighted
+Symptom: in snapshots the Recordings page selected its first row but the detail stayed empty; the self-test passed.
+Cause: `selected()` used `registeredModel(for:)`, which returns nil for a row no object holds. The self-test kept the recording in a local, the snapshot did not.
+Fix: fetch by `persistentModelID` with a limit of one; nil for a deleted row, found for an unreferenced one.
+Rule: A self-test must not keep references the real app would not keep; check through the same path the UI uses, or hold nothing.

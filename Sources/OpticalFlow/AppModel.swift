@@ -85,11 +85,13 @@ final class AppModel {
     var selectedRecording: Recording? { selected(Recording.self) }
 
     /// The selected row as its type. nil for another type (SwiftData aborts on a typed lookup of the
-    /// wrong entity) and nil once the row is deleted (a deleted model asserts on access).
+    /// wrong entity) and nil once the row is deleted. A fetch, not `registeredModel`, because a row
+    /// nothing else holds is unregistered even though it exists.
     private func selected<T: PersistentModel>(_ type: T.Type) -> T? {
-        guard let selection, selection.entityName == String(describing: T.self),
-              let model: T = context.registeredModel(for: selection), !model.isDeleted else { return nil }
-        return model
+        guard let selection, selection.entityName == String(describing: T.self) else { return nil }
+        var descriptor = FetchDescriptor<T>(predicate: #Predicate { $0.persistentModelID == selection })
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
     }
 
     var projects: [Project] {

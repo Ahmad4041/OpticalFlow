@@ -217,6 +217,11 @@ enum SelfTest {
         check("S-008 Copy puts the list on the pasteboard", NSPasteboard.general.string(forType: .string) == recording.chapterText)
         model.selection = recording.id
         check("S-010 a selected recording is not a task and does not crash the Task menu", model.selectedTask == nil && model.selectedRecording == recording)
+        try? context.save()
+        model.sidebar = .recordings
+        model.selection = model.firstID(for: .recordings)
+        check("S-010 the first recording selected the snapshot way resolves", model.selectedRecording != nil,
+              "entity \(model.selection?.entityName ?? "nil")")
         model.selection = task.id
 
         // S-007 fix: mic and camera default on; the picker may call back twice; only one capture may start.
