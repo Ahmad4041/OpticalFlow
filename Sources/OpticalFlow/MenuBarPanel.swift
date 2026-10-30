@@ -61,6 +61,14 @@ struct MenuBarPanel: View {
                 .disabled(model.recorder.isRecording)
             Toggle("Camera", systemImage: "web.camera", isOn: $recorder.cameraEnabled)
                 .disabled(model.recorder.isRecording)
+            Picker("Corner", selection: $recorder.cameraLayout.corner) {
+                Image(systemName: "arrow.up.left").tag(CameraLayout.Corner.topLeft)
+                Image(systemName: "arrow.up.right").tag(CameraLayout.Corner.topRight)
+                Image(systemName: "arrow.down.left").tag(CameraLayout.Corner.bottomLeft)
+                Image(systemName: "arrow.down.right").tag(CameraLayout.Corner.bottomRight)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
             if let error = model.recorder.lastError {
                 Text(error).font(.caption).foregroundStyle(.secondary)
             }

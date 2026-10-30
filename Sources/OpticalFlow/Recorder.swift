@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import ScreenCaptureKit
+import OpticalFlowKit
 import UserNotifications
 
 /// Screen, system audio, and mic to one MP4 with ScreenCaptureKit. The system picker
@@ -12,6 +13,16 @@ final class Recorder {
     }
     var cameraEnabled = UserDefaults.standard.object(forKey: "cameraEnabled") as? Bool ?? true {
         didSet { UserDefaults.standard.set(cameraEnabled, forKey: "cameraEnabled") }
+    }
+    var cameraLayout: CameraLayout = {
+        guard let data = UserDefaults.standard.data(forKey: "cameraLayout"),
+              let layout = try? JSONDecoder().decode(CameraLayout.self, from: data) else { return CameraLayout() }
+        return layout
+    }() {
+        didSet {
+            UserDefaults.standard.set(try? JSONEncoder().encode(cameraLayout), forKey: "cameraLayout")
+            camera.bubble.apply(cameraLayout)
+        }
     }
     /// The row for the capture in progress. Set by onStart, cleared on stop.
     var recording: Recording?
@@ -87,7 +98,7 @@ final class Recorder {
         let url = Self.directory.appending(path: "\(stamp).mp4")
         // The camera starts first: its permission prompt must not delay the screen capture.
         let cameraURL = Self.directory.appending(path: "\(stamp)-camera.mov")
-        let cameraStarted = cameraEnabled ? await camera.start(to: cameraURL) : false
+        let cameraStarted = cameraEnabled ? await camera.start(to: cameraURL, layout: cameraLayout) : false
         if cameraEnabled, !cameraStarted {
             lastError = "No camera: allow OpticalFlow in System Settings > Privacy & Security > Camera."
         }
@@ -136,12 +147,12 @@ final class CameraRecorder {
     let session = AVCaptureSession()
     private let output = AVCaptureMovieFileOutput()
     private let delegate = CameraDelegate()
-    private let bubble = CameraBubble()
+    let bubble = CameraBubble()
     /// When the first camera frame hit the file. Webcams warm up late; the export uses this to stay in sync.
     private(set) var firstFrameAt: Date?
 
     /// False when there is no camera or no permission.
-    func start(to url: URL) async -> Bool {
+    func start(to url: URL, layout: CameraLayout) async -> Bool {
         guard await AVCaptureDevice.requestAccess(for: .video),
               let device = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: device) else { return false }
@@ -154,7 +165,7 @@ final class CameraRecorder {
         firstFrameAt = nil
         delegate.onStart = { [weak self] in self?.firstFrameAt = .now }
         output.startRecording(to: url, recordingDelegate: delegate)
-        bubble.show(session: session)
+        bubble.show(session: session, layout: layout)
         return true
     }
 

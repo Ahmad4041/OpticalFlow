@@ -84,11 +84,12 @@ struct RecordingOptionsMenu: View {
         Menu {
             Toggle("Microphone", systemImage: "mic", isOn: $recorder.micEnabled)
             Toggle("Camera", systemImage: "web.camera", isOn: $recorder.cameraEnabled)
+            Divider()
+            CameraLayoutControls(layout: $recorder.cameraLayout)
         } label: {
             Label("Recording Options", systemImage: "slider.horizontal.3")
         }
-        .disabled(model.recorder.isRecording)
-        .help("Microphone and camera for the next recording")
+        .help("Microphone, camera, and where the camera sits")
     }
 }
 

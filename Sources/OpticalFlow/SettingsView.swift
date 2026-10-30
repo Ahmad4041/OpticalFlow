@@ -1,4 +1,5 @@
 import SwiftUI
+import OpticalFlowKit
 
 /// The Settings window (Command-Comma). One tab per topic, at most about
 /// six. Each tab is a grouped Form that sizes to its content, so the
@@ -69,5 +70,32 @@ struct GeneralSettings: View {
             Toggle("Camera on, as a second file", isOn: $recorder.cameraEnabled)
             LabeledContent("Saved to", value: "~/Movies/OpticalFlow")
         }
+        Section("Camera") {
+            CameraLayoutControls(layout: $recorder.cameraLayout)
+        }
+    }
+}
+
+/// Corner, size, shape, and blur. Shared by Settings and the toolbar's Recording Options.
+struct CameraLayoutControls: View {
+    @Binding var layout: CameraLayout
+
+    var body: some View {
+        Picker("Corner", selection: $layout.corner) {
+            Label("Top left", systemImage: "arrow.up.left").tag(CameraLayout.Corner.topLeft)
+            Label("Top right", systemImage: "arrow.up.right").tag(CameraLayout.Corner.topRight)
+            Label("Bottom left", systemImage: "arrow.down.left").tag(CameraLayout.Corner.bottomLeft)
+            Label("Bottom right", systemImage: "arrow.down.right").tag(CameraLayout.Corner.bottomRight)
+        }
+        Picker("Size", selection: $layout.size) {
+            Text("Small").tag(CameraLayout.Size.small)
+            Text("Medium").tag(CameraLayout.Size.medium)
+            Text("Large").tag(CameraLayout.Size.large)
+        }
+        Picker("Shape", selection: $layout.shape) {
+            Label("Circle", systemImage: "circle").tag(CameraLayout.Shape.circle)
+            Label("Rounded", systemImage: "rectangle").tag(CameraLayout.Shape.rounded)
+        }
+        Toggle("Blur the background behind you", isOn: $layout.blurBackground)
     }
 }

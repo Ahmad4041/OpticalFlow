@@ -209,6 +209,29 @@ Acceptance:
 UX: Only at the end of the title, so "Fix the friday report" is left alone... except "friday" at the very end, which the user sees in the row and can clear with Shift-Command-T. The field placeholders name the forms.
 Status: done
 
+## M7 Studio: camera, editor, and multi-display
+
+### S-028 Camera corner, size, and shape
+As the user, I choose which corner the camera sits in, how big it is, and whether it is a circle or a rounded rectangle, and both the live bubble and the export follow.
+Screens: settings-general, recording-detail
+Depends: S-011, S-012
+Acceptance:
+- [unit] CameraLayout.frame: bottom-right medium circle on 1920x1080 is a 480 pt square 38 pt from the edges; top-left small rounded is 320x180.
+- [self] An export with top-left, large, rounded renders through the Core Image compositor and keeps its length; the layout is saved.
+- [manual] Changing the corner while recording moves the live bubble at once.
+UX: Controls in Settings > Sessions > Camera and in the toolbar's Recording Options; the menu bar panel has a four-corner segmented control for speed. The live bubble shows the layout at half the export size so it does not hide your work. Dragging the bubble is still allowed for the moment; the export uses the chosen corner.
+Status: done
+
+### S-029 Blur the background behind you
+As the user, I turn on "Blur the background behind you" and the export keeps me sharp while blurring the room.
+Screens: settings-general
+Depends: S-028
+Acceptance:
+- [self] A blurred export completes (Vision person segmentation per frame in the compositor).
+- [manual] In the export the person is sharp and the background is blurred; a frame with no person is fully blurred.
+UX: Export only. The live bubble shows the raw camera because per-frame segmentation on the live preview would cost the CPU that the screen capture needs on an Intel Mac. Said in the toggle's help text.
+Status: done
+
 ## M5 System
 ### S-020 App Intents: start/stop session for Shortcuts and Apple Focus. Status: todo
 ### S-021 Always-on-top mini timer window. Status: todo

@@ -1,11 +1,12 @@
 import AVFoundation
 import Foundation
+import OpticalFlowKit
 
 /// Trims a recording, and lays the camera track over it as a picture-in-picture when given one.
 /// Trim alone is a passthrough export (no re-encode). With a camera it re-encodes as HEVC.
 enum Exporter {
     /// `cameraOffset`: seconds the camera's first frame came after the screen started.
-    static func export(screen: URL, camera: URL? = nil, cameraOffset: TimeInterval = 0,
+    static func export(screen: URL, camera: URL? = nil, cameraOffset: TimeInterval = 0, layout: CameraLayout = CameraLayout(),
                        start: TimeInterval, end: TimeInterval, to output: URL) async throws {
         let asset = AVURLAsset(url: screen)
         let composition = AVMutableComposition()
@@ -35,9 +36,16 @@ enum Exporter {
                                                         end: CMTime(seconds: cameraEnd, preferredTimescale: 600)),
                                             of: cameraTrack, at: at)
                 }
-                videoComposition = try await pictureInPicture(screen: screenTrack, screenLayer: video,
-                                                              camera: cameraTrack, cameraLayer: pip,
-                                                              duration: composition.duration)
+                let size = try await screenTrack.load(.naturalSize)
+                let cameraTransform = try await cameraTrack.load(.preferredTransform)
+                let studio = AVMutableVideoComposition()
+                studio.customVideoCompositorClass = StudioCompositor.self
+                studio.renderSize = size
+                studio.frameDuration = CMTime(value: 1, timescale: 30)
+                studio.instructions = [StudioInstruction(timeRange: CMTimeRange(start: .zero, duration: composition.duration),
+                                                         screenID: video.trackID, cameraID: pip.trackID,
+                                                         cameraTransform: cameraTransform, layout: layout)]
+                videoComposition = studio
             }
         }
 
@@ -46,34 +54,6 @@ enum Exporter {
         session.videoComposition = videoComposition
         try? FileManager.default.removeItem(at: output)
         try await session.export(to: output, as: .mp4)
-    }
-
-    /// The camera in the bottom-right corner, a quarter of the screen width, with a margin.
-    private static func pictureInPicture(screen: AVAssetTrack, screenLayer: AVMutableCompositionTrack,
-                                         camera: AVAssetTrack, cameraLayer: AVMutableCompositionTrack,
-                                         duration: CMTime) async throws -> AVMutableVideoComposition {
-        let size = try await screen.load(.naturalSize)
-        let cameraSize = try await camera.load(.naturalSize)
-        let cameraTransform = try await camera.load(.preferredTransform)
-        let scale = (size.width / 4) / cameraSize.width
-        let margin = size.width * 0.02   // ponytail: fixed corner and size, add a position picker when asked
-        let transform = cameraTransform
-            .concatenating(CGAffineTransform(scaleX: scale, y: scale))
-            .concatenating(CGAffineTransform(translationX: size.width - cameraSize.width * scale - margin,
-                                             y: size.height - cameraSize.height * scale - margin))
-
-        let screenInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: screenLayer)
-        let cameraInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: cameraLayer)
-        cameraInstruction.setTransform(transform, at: .zero)
-        let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = CMTimeRange(start: .zero, duration: duration)
-        instruction.layerInstructions = [cameraInstruction, screenInstruction]
-
-        let composition = AVMutableVideoComposition()
-        composition.renderSize = size
-        composition.frameDuration = CMTime(value: 1, timescale: 30)
-        composition.instructions = [instruction]
-        return composition
     }
 
     enum ExportError: LocalizedError {

@@ -79,3 +79,13 @@ func cleans(_ input: String, expected: String?) {
     #expect(DueDateParser.parse("Buy milk", now: now) == .init(title: "Buy milk", due: nil))
     #expect(DueDateParser.parse("Read the book in sunlight", now: now).due == nil)
 }
+
+@Test func cameraLayoutFrames() {
+    let canvas = CGSize(width: 1920, height: 1080)
+    let br = CameraLayout(corner: .bottomRight, size: .medium, shape: .circle).frame(in: canvas)
+    #expect(br == CGRect(x: 1920 - 480 - 38, y: 38, width: 480, height: 480))
+    let tl = CameraLayout(corner: .topLeft, size: .small, shape: .rounded).frame(in: canvas)
+    #expect(tl == CGRect(x: 38, y: 1080 - 180 - 38, width: 320, height: 180))
+    #expect(CameraLayout(shape: .circle).cornerRadius(for: br) == 240)
+    #expect(CameraLayout(shape: .rounded).cornerRadius(for: tl) == 26)
+}

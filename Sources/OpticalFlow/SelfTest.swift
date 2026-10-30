@@ -184,6 +184,9 @@ enum SelfTest {
         check("S-008 the chapter list starts at 0:00", recording.chapterText == "0:00 Recording\n1:35 Ship the build", recording.chapterText)
         recording.copyChapters()
         check("S-008 Copy puts the list on the pasteboard", NSPasteboard.general.string(forType: .string) == recording.chapterText)
+        model.selection = recording.id
+        check("S-010 a selected recording is not a task and does not crash the Task menu", model.selectedTask == nil && model.selectedRecording == recording)
+        model.selection = task.id
 
         // S-007 fix: mic and camera default on; the picker may call back twice; only one capture may start.
         check("S-007 microphone and camera are on by default", model.recorder.micEnabled && model.recorder.cameraEnabled,
@@ -216,6 +219,14 @@ enum SelfTest {
             check("S-012 the composite keeps the screen size and range", abs(compositeSeconds - 2) < 0.3 && size == CGSize(width: 320, height: 240), "\(compositeSeconds) \(size)")
             check("S-012 the composite is named with camera", composite.url.lastPathComponent.hasSuffix("with camera.mp4"))
             check("S-012 the composite has one video track", try await asset.loadTracks(withMediaType: .video).count == 1)
+            // S-028 / S-029: every corner, shape, and blur renders through the compositor.
+            let saved = model.recorder.cameraLayout
+            model.recorder.cameraLayout = CameraLayout(corner: .topLeft, size: .large, shape: .rounded, blurBackground: true)
+            let styled = try await model.trim(original, start: 1, end: 2.5, withCamera: true)
+            let styledSeconds = try await AVURLAsset(url: styled.url).load(.duration).seconds
+            check("S-028 a rounded top-left large camera with blur exports", abs(styledSeconds - 1.5) < 0.3, "\(styledSeconds)")
+            check("S-028 the layout is remembered", UserDefaults.standard.data(forKey: "cameraLayout") != nil)
+            model.recorder.cameraLayout = saved
             original.cameraOffset = 2.5   // camera woke up late: only its first 0.5 s overlap the 1...3 range
             let late = try await model.trim(original, start: 1, end: 3, withCamera: true)
             let lateSeconds = try await AVURLAsset(url: late.url).load(.duration).seconds
