@@ -81,7 +81,10 @@ enum Snapshot {
             }
             if only == nil || only?.contains("voice") == true {
                 model.voice.show(listening: false)
-                model.voice.transcript = "Make the login loop urgent"
+                model.voice.transcript = "Make the login loop urgent and add a note: repro needs a fresh profile"
+                model.voice.busy = true
+                model.voice.startedAt = .now.addingTimeInterval(-7)
+                model.voice.steps = ["tasks list --search login", "tasks update 0bc72e97 --priority high"]
                 try? await Task.sleep(for: .seconds(0.8))
                 let panel = NSApp.windows.first { $0.frameAutosaveName == "VoicePanel" }
                 for mode in ["light", "dark"] {
@@ -89,6 +92,7 @@ enum Snapshot {
                     try? await Task.sleep(for: .seconds(0.4))
                     capture(to: "\(dir)/voice-\(mode).png", window: panel)
                 }
+                model.voice.busy = false
                 model.voice.close()
             }
             if only == nil || only?.contains("minitimer") == true {

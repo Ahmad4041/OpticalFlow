@@ -252,7 +252,8 @@ enum AgentCommands {
                 return ["intent": "\(intent)", "reply": model.perform(intent)]
             }
             model.voice.send(text)
-            return ["sentTo": model.voice.orchestrator.title, "reply": "pending; see the voice panel"]
+            if model.voice.handledLocally { return ["fast": true, "reply": model.voice.reply] }
+            return ["sentTo": model.voice.orchestrator.title, "reply": "pending; poll agent state for steps and reply"]
         },
 
         AgentCommand(name: "agent listen", summary: "Open the voice panel and listen. With --probe nothing is sent; read the result with agent state.",

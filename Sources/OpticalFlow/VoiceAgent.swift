@@ -49,10 +49,10 @@ enum Orchestrator: String, CaseIterable, Identifiable {
     func arguments(prompt: String, workdir: String) -> [String] {
         switch self {
         case .builtin: []
-        case .claude: ["-p", prompt, "--output-format", "text", "--allowedTools", "Bash(opticalflow:*)",
-                       "--disallowedTools", "Edit,Write,NotebookEdit,WebFetch,WebSearch"]
+        case .claude: ["-p", prompt, "--output-format", "stream-json", "--verbose", "--model", "haiku",
+                       "--allowedTools", "Bash(opticalflow:*)", "--disallowedTools", "Edit,Write,NotebookEdit,WebFetch,WebSearch"]
         // The workspace sandbox blocks all network, which includes the app's socket; this lets the socket through.
-        case .codex: ["exec", "--skip-git-repo-check", "-s", "workspace-write", "-c", "sandbox_workspace_write.network_access=true",
+        case .codex: ["exec", "--json", "--skip-git-repo-check", "-s", "workspace-write", "-c", "sandbox_workspace_write.network_access=true",
                       "-C", workdir, "--color", "never", prompt]
         }
     }
@@ -70,6 +70,11 @@ final class VoiceAgent {
     var error: String?
     var listening = false
     var busy = false
+    /// What the orchestrator has done so far, one line per step.
+    var steps: [String] = []
+    var startedAt: Date?
+    /// True after the last sentence was handled by the built-in parser.
+    var handledLocally = false
     /// Off while a CLI probe listens, so nothing acts on noise.
     var autoSend = true
     /// What the last listen found, for `opticalflow agent diagnose`.
@@ -106,6 +111,7 @@ final class VoiceAgent {
         transcript = ""
         reply = ""
         error = nil
+        steps = []
         panel.center()
         if let screen = NSScreen.main {
             panel.setFrameOrigin(NSPoint(x: panel.frame.origin.x, y: screen.visibleFrame.midY + screen.visibleFrame.height * 0.15))
@@ -291,15 +297,29 @@ final class VoiceAgent {
         guard !clean.isEmpty, !busy else { return }
         transcript = clean
         error = nil
-        if orchestrator == .builtin || !orchestrator.isInstalled {
-            reply = model.perform(VoiceIntent.parse(clean))
-            Task { [weak self] in
-                try? await Task.sleep(for: .seconds(2))
-                if self?.busy == false, self?.listening == false { self?.close() }
+        reply = ""
+        steps = []
+        // Fast path: a clear command runs here in a few milliseconds. Compound sentences, sentences no rule
+        // matched, and misses ("no task matches") go to the AI, which can search and reason.
+        let intent = VoiceIntent.parse(clean)
+        let matched = intent != .add(title: clean)
+        let compound = clean.range(of: #"\b(and|then|also)\b|[,;]"#, options: .regularExpression) != nil
+        if orchestrator == .builtin || !orchestrator.isInstalled || (matched && !compound) {
+            let answer = model.perform(intent)
+            if orchestrator == .builtin || !orchestrator.isInstalled || !answer.hasPrefix("No open task") {
+                handledLocally = true
+                reply = answer
+                steps = []
+                Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(2.5))
+                    if self?.busy == false, self?.listening == false { self?.close() }
+                }
+                return
             }
-            return
         }
+        handledLocally = false
         busy = true
+        startedAt = .now
         let prompt = prompt(for: clean)
         let which = orchestrator
         Task { [weak self] in
@@ -344,23 +364,54 @@ final class VoiceAgent {
         process.standardInput = FileHandle.nullDevice
         try process.run()
         self.process = process
-        nonisolated(unsafe) let outHandle = out.fileHandleForReading
         nonisolated(unsafe) let errHandle = err.fileHandleForReading
-        async let stdout = Task.detached { outHandle.readDataToEndOfFile() }.value
         async let stderr = Task.detached { errHandle.readDataToEndOfFile() }.value
-        let (output, errors) = await (String(decoding: stdout, as: UTF8.self), String(decoding: stderr, as: UTF8.self))
+        // Both agents stream one JSON event per line; each command they run becomes a step on screen.
+        var answer = ""
+        for try await line in out.fileHandleForReading.bytes.lines {
+            guard let data = line.data(using: .utf8), let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+            if let step = Self.step(in: event) { steps.append(step) }
+            if let final = Self.answer(in: event) { answer = final }
+        }
+        let errors = String(decoding: await stderr, as: UTF8.self)
         process.waitUntilExit()
         self.process = nil
-        guard process.terminationStatus == 0 || !output.isEmpty else {
+        guard process.terminationStatus == 0 || !answer.isEmpty else {
             throw VoiceError.failed(which.title, errors.split(separator: "\n").suffix(3).joined(separator: " "))
         }
-        return output
+        return answer
+    }
+
+    /// A command the agent ran, as a short line: "tasks update 3f2a --priority high".
+    private static func step(in event: [String: Any]) -> String? {
+        var command: String?
+        if event["type"] as? String == "assistant",
+           let content = (event["message"] as? [String: Any])?["content"] as? [[String: Any]] {
+            command = content.lazy.compactMap { ($0["input"] as? [String: Any])?["command"] as? String }.first
+        }
+        if event["type"] as? String == "item.started" || event["type"] as? String == "item.completed",
+           let item = event["item"] as? [String: Any], item["type"] as? String == "command_execution" {
+            if event["type"] as? String == "item.completed" { return nil }
+            command = item["command"] as? String
+        }
+        guard var text = command else { return nil }
+        text = text.replacingOccurrences(of: "opticalflow ", with: "").replacingOccurrences(of: " --json", with: "")
+        text = text.replacingOccurrences(of: #"^(/bin/)?(ba|z)?sh -lc '?|'?$"#, with: "", options: .regularExpression)
+        return text.count > 90 ? String(text.prefix(90)) + "…" : text
+    }
+
+    /// The agent's final sentence.
+    private static func answer(in event: [String: Any]) -> String? {
+        if event["type"] as? String == "result", let text = event["result"] as? String { return text }
+        if event["type"] as? String == "item.completed", let item = event["item"] as? [String: Any],
+           item["type"] as? String == "agent_message", let text = item["text"] as? String { return text }
+        return nil
     }
 
     // MARK: Panel
 
     private func makePanel() -> NSPanel {
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 140),
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 160),
                             styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow],
                             backing: .buffered, defer: false)
         panel.titleVisibility = .hidden
@@ -375,6 +426,18 @@ final class VoiceAgent {
         panel.setFrameAutosaveName("VoicePanel")
         panel.contentView = NSHostingView(rootView: VoiceView().environment(model).themed())
         return panel
+    }
+
+    /// The panel follows its content's height, keeping its top edge where it is.
+    func fit(height: CGFloat) {
+        guard let panel, height > 0 else { return }
+        let target = ceil(height)
+        let current = panel.contentRect(forFrameRect: panel.frame).height
+        guard abs(current - target) > 1 else { return }
+        var frame = panel.frame
+        frame.origin.y -= target - current
+        frame.size.height += target - current
+        panel.setFrame(frame, display: true, animate: panel.isVisible)
     }
 }
 
@@ -393,43 +456,134 @@ struct VoiceView: View {
     @Environment(AppModel.self) private var model
     @FocusState private var focused: Bool
 
+    private var firstName: String { NSFullUserName().split(separator: " ").first.map(String.init) ?? "there" }
+
+    private var greeting: String {
+        switch Calendar.current.component(.hour, from: .now) {
+        case 5..<12: "Good morning, \(firstName)."
+        case 12..<18: "Good afternoon, \(firstName)."
+        default: "Good evening, \(firstName)."
+        }
+    }
+
+    private func headline(_ voice: VoiceAgent) -> String {
+        if voice.busy { return "Working on it" }
+        if voice.listening { return "Listening" }
+        if !voice.reply.isEmpty { return voice.handledLocally ? "Done" : "Done, with \(voice.orchestrator.title)" }
+        if voice.error != nil { return "Something is off" }
+        return greeting
+    }
+
     var body: some View {
         @Bindable var voice = model.voice
-        VStack(alignment: .leading, spacing: Space.sm) {
-            HStack(spacing: Space.sm) {
-                Image(systemName: voice.listening ? "waveform" : "mic.fill")
-                    .symbolEffect(.variableColor.iterative, isActive: voice.listening)
-                    .foregroundStyle(voice.listening ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                    .frame(width: Space.xxl)
-                TextField("Say or type what to do", text: $voice.transcript)
+        HStack(alignment: .top, spacing: Space.md) {
+            VoiceAvatar(listening: voice.listening, busy: voice.busy, done: !voice.reply.isEmpty, failed: voice.error != nil)
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Text(headline(voice))
+                    .font(.headline)
+                    .contentTransition(.opacity)
+                TextField("Say or type what to do", text: $voice.transcript, axis: .vertical)
                     .textFieldStyle(.plain)
-                    .font(.title2)
+                    .font(.title3)
+                    .lineLimit(1...3)
                     .focused($focused)
                     .onSubmit { voice.send(voice.transcript) }
                     .onExitCommand { voice.close() }
-            }
-            if voice.busy {
-                HStack(spacing: Space.sm) {
-                    ProgressView().controlSize(.small)
-                    Text("Asking \(voice.orchestrator.title)…")
-                }
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            } else if let error = voice.error {
-                Text(error).font(.callout).foregroundStyle(.red)
-            } else if !voice.reply.isEmpty {
-                Label(voice.reply, systemImage: "checkmark.circle")
+                if voice.busy || !voice.steps.isEmpty {
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        ForEach(Array(voice.steps.enumerated()), id: \.offset) { _, step in
+                            Label(step, systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        if voice.busy {
+                            TimelineView(.periodic(from: .now, by: 1)) { context in
+                                HStack(spacing: Space.sm) {
+                                    ProgressView().controlSize(.mini)
+                                    Text(voice.steps.isEmpty ? "Thinking" : "Thinking about the next step")
+                                    Text("\(Int(context.date.timeIntervalSince(voice.startedAt ?? context.date))) s")
+                                        .monospacedDigit()
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                    }
                     .font(.callout)
-                    .textSelection(.enabled)
+                    .transition(.opacity)
+                }
+                if let error = voice.error {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                } else if !voice.reply.isEmpty {
+                    Text(voice.reply)
+                        .font(.callout)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, Space.md)
+                        .padding(.vertical, Space.sm)
+                        .background(Palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Space.md))
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                Text(footer(voice))
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
-            Text(voice.listening ? "Listening. Pause to send, or press Return. Escape cancels."
-                 : "Return sends to \(voice.orchestrator.title). Escape closes. Change it in Settings > Agent.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Space.xl)
-        .frame(width: 520)
+        .frame(width: 560)
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { voice.fit(height: $0) }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea()   // the panel's title bar is transparent; draw under it
+        .animation(.default, value: voice.steps.count)
+        .animation(.default, value: voice.reply)
         .onAppear { focused = true }
+    }
+
+    private func footer(_ voice: VoiceAgent) -> String {
+        if voice.listening { return "Pause to send, or press Return. Escape cancels." }
+        if voice.busy { return "\(voice.orchestrator.title) is running opticalflow commands. Escape stops it." }
+        return "Clear commands run at once. Longer requests go to \(voice.orchestrator.title). Settings > Agent."
+    }
+}
+
+/// A round accent avatar that breathes while listening, sparkles while thinking, and ticks when done.
+struct VoiceAvatar: View {
+    let listening: Bool
+    let busy: Bool
+    let done: Bool
+    let failed: Bool
+
+    private var symbol: String {
+        if failed { return "exclamationmark" }
+        if done { return "checkmark" }
+        if busy { return "sparkles" }
+        if listening { return "waveform" }
+        return "mic.fill"
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(colors: [Palette.accent, Palette.accent.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            if listening {
+                Circle()
+                    .stroke(Palette.accent.opacity(0.35), lineWidth: Space.xs)
+                    .scaleEffect(1.25)
+                    .symbolEffect(.pulse)
+            }
+            Image(systemName: symbol)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Palette.onAccent)
+                .symbolEffect(.variableColor.iterative, isActive: listening)
+                .symbolEffect(.pulse, isActive: busy)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .frame(width: 40, height: 40)
+        .accessibilityHidden(true)
     }
 }
 

@@ -388,6 +388,13 @@ final class AppModel {
 
     var breakRemaining: Int { breakUntil.map { max(0, Int(ceil($0.timeIntervalSince(now)))) } ?? 0 }
 
+    /// Seconds left in the session; negative in overtime. nil without a session.
+    var remaining: Int? { session.map { $0.plannedMinutes * 60 - elapsed } }
+    /// "24:59" or "+00:05", with no symbols, for large displays.
+    var clockLabel: String? { remaining.map { $0 >= 0 ? Countdown.clock($0) : "+" + Countdown.clock(-$0) } }
+    /// 0 to 1 through the planned time.
+    var sessionProgress: Double { session.map { min(1, Double(elapsed) / Double(max(1, $0.plannedMinutes * 60))) } ?? 0 }
+
     /// Stops the session if one runs, then counts down a break.
     func startBreak(minutes: Int) {
         stopSession()

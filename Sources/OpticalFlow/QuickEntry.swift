@@ -121,6 +121,7 @@ struct QuickEntryView: View {
         }
         .padding(Space.xl)
         .frame(width: 520)
+        .ignoresSafeArea()   // the panel's title bar is transparent; draw under it
         .onAppear { focused = true }
     }
 }
