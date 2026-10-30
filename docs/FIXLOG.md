@@ -29,3 +29,9 @@ Symptom: `tools/selftest.sh` printed nothing and never exited; a plain launch fr
 Cause: the agent's shell was sandboxed in this session. A process it spawns cannot connect to WindowServer, so NSApplication runs its event loop with no windows and the `.task` that starts the self-test never fires.
 Fix: both scripts launch the app through `open -W --stdout --stderr --env`, so LaunchServices starts it outside the shell's sandbox.
 Rule: Launch GUI apps for checks through `open`, never by exec'ing the binary; and when a tool prints nothing, probe the window list before suspecting the code.
+
+## 2026-10-31 Crash (swift_dynamicCast abort) when a recording was selected
+Symptom: SIGABRT in `AppModel.selected<A>()` from the Task menu, right after selecting a recording.
+Cause: `ModelContext.registeredModel(for:) as T?` aborts instead of returning nil when the id belongs to another entity. The previous fix for deleted rows introduced this.
+Fix: check `PersistentIdentifier.entityName` against the requested type before the typed lookup.
+Rule: A typed SwiftData lookup needs an entity check first; `as T?` on SwiftData APIs is not a safe cast.

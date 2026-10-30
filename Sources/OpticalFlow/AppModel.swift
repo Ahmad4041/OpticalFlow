@@ -74,12 +74,14 @@ final class AppModel {
 
     // MARK: Tasks
 
-    var selectedTask: TaskItem? { selected() }
-    var selectedRecording: Recording? { selected() }
+    var selectedTask: TaskItem? { selected(TaskItem.self) }
+    var selectedRecording: Recording? { selected(Recording.self) }
 
-    /// The selected row as its type, or nil once it has been deleted (a deleted model asserts on access).
-    private func selected<T: PersistentModel>() -> T? {
-        guard let selection, let model = context.registeredModel(for: selection) as T?, !model.isDeleted else { return nil }
+    /// The selected row as its type. nil for another type (SwiftData aborts on a typed lookup of the
+    /// wrong entity) and nil once the row is deleted (a deleted model asserts on access).
+    private func selected<T: PersistentModel>(_ type: T.Type) -> T? {
+        guard let selection, selection.entityName == String(describing: T.self),
+              let model: T = context.registeredModel(for: selection), !model.isDeleted else { return nil }
         return model
     }
 
@@ -348,7 +350,7 @@ final class AppModel {
         var suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
         if camera != nil { suffix += " with camera" }
         let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(suffix).mp4")
-        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, start: start, end: end, to: output)
+        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, layout: recorder.cameraLayout, start: start, end: end, to: output)
         let new = Recording(url: output, session: recording.session)
         new.startedAt = recording.startedAt.addingTimeInterval(start)
         new.duration = end - start
