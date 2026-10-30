@@ -68,6 +68,8 @@ struct GeneralSettings: View {
         Section("Recording") {
             Toggle("Microphone on", isOn: $recorder.micEnabled)
             Toggle("Camera on, as a second file", isOn: $recorder.cameraEnabled)
+            Toggle("Follow the pointer to another display", isOn: $recorder.followsDisplay)
+                .help("When you record a whole display and move the pointer to another one, the recording switches there. Asks for Screen Recording permission once.")
             LabeledContent("Saved to", value: "~/Movies/OpticalFlow")
         }
         Section("Camera") {

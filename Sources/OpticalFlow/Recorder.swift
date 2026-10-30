@@ -14,6 +14,11 @@ final class Recorder {
     var cameraEnabled = UserDefaults.standard.object(forKey: "cameraEnabled") as? Bool ?? true {
         didSet { UserDefaults.standard.set(cameraEnabled, forKey: "cameraEnabled") }
     }
+    /// Opt-in: when the pointer moves to another display, the capture follows it.
+    /// Listing displays needs the Screen Recording permission the picker otherwise avoids.
+    var followsDisplay = UserDefaults.standard.bool(forKey: "followsDisplay") {
+        didSet { UserDefaults.standard.set(followsDisplay, forKey: "followsDisplay") }
+    }
     var cameraLayout: CameraLayout = {
         guard let data = UserDefaults.standard.data(forKey: "cameraLayout"),
               let layout = try? JSONDecoder().decode(CameraLayout.self, from: data) else { return CameraLayout() }
@@ -41,6 +46,9 @@ final class Recorder {
     private var cursor = CursorTrack()
     private var cursorTimer: Timer?
     private var cursorURL: URL?
+    /// The captured rect in CG coordinates (y from the top); moves when the capture follows the pointer.
+    private var capturedRect = CGRect.zero
+    private var switching = false
     private let observer = PickerObserver()
     private let streamDelegate = StreamDelegate()
     private let camera = CameraRecorder()
@@ -133,18 +141,47 @@ final class Recorder {
     private func trackCursor(in rect: CGRect, to url: URL) {
         cursor = CursorTrack()
         cursorURL = url
+        capturedRect = rect
         recording?.cursorPath = url.path
-        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         let started = Date.now
+        var tick = 0
         cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                let p = NSEvent.mouseLocation
-                let cg = CGPoint(x: p.x, y: screenHeight - p.y)
-                guard rect.width > 0, rect.height > 0 else { return }
-                self?.cursor.samples.append(.init(t: Date.now.timeIntervalSince(started),
-                                                  x: min(max((cg.x - rect.minX) / rect.width, 0), 1),
-                                                  y: min(max((cg.y - rect.minY) / rect.height, 0), 1)))
+                guard let self else { return }
+                let cg = Self.cgPoint(NSEvent.mouseLocation)
+                let p = CursorTrack.normalize(cg, in: self.capturedRect)
+                self.cursor.samples.append(.init(t: Date.now.timeIntervalSince(started), x: p.x, y: p.y))
+                tick += 1
+                if self.followsDisplay, tick % 5 == 0, !self.capturedRect.contains(cg) { Task { await self.follow(to: cg) } }
             }
+        }
+    }
+
+    /// Cocoa (bottom-left) to CG (top-left) coordinates on the primary display.
+    private static func cgPoint(_ p: NSPoint) -> CGPoint {
+        CGPoint(x: p.x, y: (NSScreen.screens.first?.frame.height ?? 0) - p.y)
+    }
+
+    private static func cgFrame(_ screen: NSScreen) -> CGRect {
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+        return CGRect(x: screen.frame.minX, y: primaryHeight - screen.frame.maxY, width: screen.frame.width, height: screen.frame.height)
+    }
+
+    /// Switches the live capture to the display under the pointer. Only when the capture was a whole display.
+    private func follow(to point: CGPoint) async {
+        guard let stream, !switching,
+              let screen = NSScreen.screens.first(where: { Self.cgFrame($0).contains(point) }),
+              let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+              NSScreen.screens.contains(where: { Self.cgFrame($0) == capturedRect }) else { return }
+        switching = true
+        defer { switching = false }
+        do {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            guard let display = content.displays.first(where: { $0.displayID == id }) else { return }
+            try await stream.updateContentFilter(SCContentFilter(display: display, excludingWindows: []))
+            capturedRect = Self.cgFrame(screen)
+        } catch {
+            lastError = "Could not follow the pointer to the other display: \(error.localizedDescription)"
         }
     }
 

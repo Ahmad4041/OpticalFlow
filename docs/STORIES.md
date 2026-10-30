@@ -253,6 +253,16 @@ Acceptance:
 UX: Fixed 2x zoom, always on when the toggle is on. Auto zoom-in on clicks and zoom-out when idle are later; said in the help text.
 Status: done
 
+### S-032 Follow the pointer to another display
+As the user recording a whole display, I move the pointer to my other monitor and the recording switches to it.
+Screens: settings-general
+Depends: S-007
+Acceptance:
+- [unit] CursorTrack.normalize maps a point on a second display into that display's rect.
+- [manual] With the toggle on and a display picked, moving the pointer to another display switches the capture within half a second; a window capture never switches; the first use asks for Screen Recording permission.
+UX: Off by default and explained in the toggle's help, because it needs the Screen Recording permission the picker avoids. The file keeps one size; a display with another aspect is scaled by ScreenCaptureKit.
+Status: done
+
 ## M5 System
 ### S-020 App Intents: start/stop session for Shortcuts and Apple Focus. Status: todo
 ### S-021 Always-on-top mini timer window. Status: todo

@@ -98,3 +98,9 @@ func cleans(_ input: String, expected: String?) {
     let smooth = track.smoothed()
     #expect(smooth.samples[1].x > 0.02 && smooth.samples[1].x < 0.5)
 }
+
+@Test func normalizePoint() {
+    let rect = CGRect(x: 1920, y: 0, width: 2560, height: 1440)   // a second display to the right
+    #expect(CursorTrack.normalize(CGPoint(x: 3200, y: 720), in: rect) == CGPoint(x: 0.5, y: 0.5))
+    #expect(CursorTrack.normalize(CGPoint(x: 100, y: 5000), in: rect) == CGPoint(x: 0, y: 1))
+}

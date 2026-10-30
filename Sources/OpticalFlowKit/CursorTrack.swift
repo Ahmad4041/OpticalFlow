@@ -42,3 +42,12 @@ public struct CursorTrack: Codable, Equatable, Sendable {
         return CGRect(x: x, y: y, width: w, height: h)
     }
 }
+
+public extension CursorTrack {
+    /// A point in the same coordinate space as `rect`, as fractions of it, clamped to 0...1.
+    static func normalize(_ point: CGPoint, in rect: CGRect) -> CGPoint {
+        guard rect.width > 0, rect.height > 0 else { return CGPoint(x: 0.5, y: 0.5) }
+        return CGPoint(x: min(max((point.x - rect.minX) / rect.width, 0), 1),
+                       y: min(max((point.y - rect.minY) / rect.height, 0), 1))
+    }
+}

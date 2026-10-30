@@ -84,6 +84,7 @@ struct RecordingOptionsMenu: View {
         Menu {
             Toggle("Microphone", systemImage: "mic", isOn: $recorder.micEnabled)
             Toggle("Camera", systemImage: "web.camera", isOn: $recorder.cameraEnabled)
+            Toggle("Follow Pointer Across Displays", systemImage: "rectangle.on.rectangle", isOn: $recorder.followsDisplay)
             Divider()
             CameraLayoutControls(layout: $recorder.cameraLayout)
         } label: {
