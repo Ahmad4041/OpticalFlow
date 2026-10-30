@@ -157,7 +157,17 @@ func cleans(_ input: String, expected: String?) {
     ("the picker API is medium priority", .setPriority(match: "the picker api", .medium)),
     ("add a note to the login loop: repro needs sign out first", .addNote(match: "the login loop", note: "repro needs sign out first")),
     ("note on chapter export saying use the youtube preset", .addNote(match: "chapter export", note: "use the youtube preset")),
+    ("add a subtask to the login loop: write the regression test", .addSubtask(match: "the login loop", title: "write the regression test")),
+    ("add a step under chapter export called upload the file", .addSubtask(match: "chapter export", title: "upload the file")),
 ])
 func voiceIntents(_ text: String, expected: VoiceIntent) {
     #expect(VoiceIntent.parse(text) == expected)
+}
+
+@Test func checklists() {
+    let items = Checklist.parse("Write the test; Run it;\n\nShip")
+    #expect(items.map(\.title) == ["Write the test", "Run it", "Ship"])
+    var done = items; done[1].isDone = true
+    #expect(Checklist.progress(done) == (1, 3))
+    #expect(Checklist.index(of: "2", in: items) == 1 && Checklist.index(of: "ship", in: items) == 2 && Checklist.index(of: "nope", in: items) == nil)
 }

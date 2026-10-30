@@ -64,6 +64,7 @@ enum AgentCommands {
                               .init(name: "due", help: "today, tomorrow, fri, in 3 days, 5 nov, or 2026-11-05"),
                               .init(name: "someday", kind: .boolean, help: "park it in Someday"),
                               .init(name: "priority", help: "none, low, medium, or high (urgent)"),
+                              .init(name: "subtasks", help: "steps separated by ; (\"write test; run it\")"),
                               .init(name: "record", kind: .boolean, help: "record the screen during its sessions")],
                      example: "opticalflow tasks add --title \"Fix the login loop\" --project OpticalFlow --due tomorrow --json") { args, model in
             guard let task = model.addTask(title: try args.required("title"), on: .list(.inbox)) else { throw AgentError.invalid("--title cannot be empty") }
@@ -80,6 +81,9 @@ enum AgentCommands {
                               .init(name: "someday", kind: .boolean, help: "true or false"),
                               .init(name: "doing", kind: .boolean, help: "on the board's Doing column"),
                               .init(name: "priority", help: "none, low, medium, or high (urgent)"),
+                              .init(name: "subtasks", help: "add steps separated by ;"),
+                              .init(name: "check", help: "mark a subtask done, by its number or words in its title"),
+                              .init(name: "uncheck", help: "mark a subtask not done, by number or words"),
                               .init(name: "record", kind: .boolean, help: "record the screen during its sessions")],
                      example: "opticalflow tasks update 3f2a9c1e --due fri --record true --json") { args, model in
             let task = try findTask(try args.required("id"), in: model)
@@ -323,6 +327,12 @@ enum AgentCommands {
         if let someday = try args.bool("someday") { task.isSomeday = someday }
         if let doing = try args.bool("doing") { task.isDoing = doing }
         if let record = try args.bool("record") { task.recordsSession = record }
+        if let text = args.string("subtasks") { task.checklist += Checklist.parse(text) }
+        for (key, done) in [("check", true), ("uncheck", false)] {
+            guard let text = args.string(key) else { continue }
+            guard let index = Checklist.index(of: text, in: task.checklist) else { throw AgentError.invalid("no subtask matches \"\(text)\"") }
+            task.checklist[index].isDone = done
+        }
         if let text = args.string("priority") {
             guard let priority = Priority.parse(text) else { throw AgentError.usage("--priority takes none, low, medium, or high") }
             task.priority = priority
@@ -366,6 +376,7 @@ extension TaskItem: AgentIdentified {
         var json: JSONObject = ["id": String(agentID.prefix(8)), "title": title, "notes": notes, "done": isDone,
                                 "someday": isSomeday, "doing": isDoing, "records": recordsSession, "column": boardColumn.rawValue,
                                 "priority": priority.title.lowercased(),
+                                "subtasks": checklist.map { ["title": $0.title, "done": $0.isDone] as JSONObject },
                                 "createdAt": JSON.date(createdAt)]
         if let due { json["due"] = JSON.date(due) }
         if let project { json["project"] = project.name; json["projectId"] = String(project.agentID.prefix(8)) }

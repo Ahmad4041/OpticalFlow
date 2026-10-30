@@ -50,6 +50,8 @@ final class TaskItem {
     var recordsSession: Bool = false
     /// Priority.rawValue; 0 is none.
     var priorityRaw: Int = 0
+    /// Subtasks, in order.
+    var checklist: [ChecklistItem] = []
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?

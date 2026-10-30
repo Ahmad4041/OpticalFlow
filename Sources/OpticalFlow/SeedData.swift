@@ -41,6 +41,9 @@ enum SeedData {
         login.isDoing = true
         login.recordsSession = true
         login.priority = .high
+        login.checklist = [ChecklistItem(title: "Reproduce with a fresh profile", isDone: true),
+                           ChecklistItem(title: "Write the regression test"),
+                           ChecklistItem(title: "Fix the redirect")]
         task("Write the chapter export", project: app, due: day(-1), age: 6)
         let walkthrough = task("Record the SwiftData walkthrough", project: stream, due: .now, done: true, age: 5)
         task("Set up the OBS scene for the Mac stream", project: stream, due: day(2), age: 4).recordsSession = true

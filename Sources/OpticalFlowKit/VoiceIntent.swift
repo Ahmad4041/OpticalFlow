@@ -9,6 +9,7 @@ public enum VoiceIntent: Equatable, Sendable {
     case stop
     case setPriority(match: String, Priority)
     case addNote(match: String, note: String)
+    case addSubtask(match: String, title: String)
 
     private static let priorityWords = "urgent|high priority|high|medium priority|medium|normal|low priority|low|asap|critical"
 
@@ -19,6 +20,7 @@ public enum VoiceIntent: Equatable, Sendable {
 
     private static let rules: [Rule] = [
         rule(#"^(?:stop|end|finish)(?: the)?(?: current)? session$"#) { _ in .stop },
+        rule(#"^(?:add|create) (?:a |the )?(?:subtask|sub task|sub-task|step|checklist item) (?:to|on|for|under) (.+?)(?::| called| saying),? (.+)$"#) { .addSubtask(match: $0[0], title: $0[1]) },
         rule(#"^(?:add|create|make) (?:a |the )?note (?:to|on|for) (.+?)(?::| saying| that),? (.+)$"#) { .addNote(match: $0[0], note: $0[1]) },
         rule(#"^note (?:to|on|for) (.+?)(?::| saying| that),? (.+)$"#) { .addNote(match: $0[0], note: $0[1]) },
         rule(#"^(?:make|mark|set|flag) (.+?)(?: as| to)? (\#(priorityWords))(?: priority)?$"#) { .setPriority(match: $0[0], Priority.parse(word($0[1])) ?? .high) },

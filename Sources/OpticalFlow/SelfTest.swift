@@ -255,6 +255,20 @@ enum SelfTest {
         reply = model.perform(.complete(match: "zebra quantum"))
         check("S-041 no match is reported, nothing changes", reply.hasPrefix("No open task"), reply)
         check("S-041 orchestrators report install state", Orchestrator.builtin.isInstalled)
+
+        // S-043: subtasks.
+        guard let steps = model.addTask(title: "Ship the release", on: .list(.inbox)) else { return check("S-043 add", false) }
+        steps.checklist = Checklist.parse("Tag it; Build; Upload")
+        steps.checklist[0].isDone = true
+        model.save()
+        check("S-043 a task keeps its subtasks and progress", steps.checklist.count == 3 && Checklist.progress(steps.checklist) == (1, 3))
+        reply = model.perform(VoiceIntent.parse("add a subtask to ship the release: write the notes"))
+        check("S-043 'add a subtask to X' appends one", steps.checklist.last?.title == "write the notes", reply)
+        steps.checklist[1].isDone = true
+        model.save()
+        let reopenedSteps = (try? context.fetch(FetchDescriptor<TaskItem>()))?.first { $0.title == "Ship the release" }
+        check("S-043 subtasks survive a fetch", reopenedSteps?.checklist.filter(\.isDone).count == 2)
+        model.delete(steps)
         model.sidebar = .project(projectID)
         let picks = model.recorder.pickRequests
         model.startSession(on: task)

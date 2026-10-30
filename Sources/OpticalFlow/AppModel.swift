@@ -301,6 +301,12 @@ final class AppModel {
             task.priority = priority
             save()
             return "“\(task.title)” is now \(priority.title.lowercased()) priority."
+        case .addSubtask(let match, let title):
+            guard let task = found(match) else { return "No open task matches “\(match)”." }
+            guard let clean = TaskTitle.clean(title) else { return "Nothing to add." }
+            task.checklist.append(ChecklistItem(title: clean))
+            save()
+            return "Added “\(clean)” under “\(task.title)”."
         case .addNote(let match, let note):
             guard let task = found(match) else { return "No open task matches “\(match)”." }
             task.notes = task.notes.isEmpty ? note : task.notes + "\n" + note

@@ -354,6 +354,16 @@ Acceptance:
 UX: On-device speech when the language supports it; a pause sends. Orchestrator in Settings > Agent: Built in (no AI), Claude Code (`claude -p`, only the opticalflow command allowed), or Codex (`codex exec`, workspace sandbox). ChatGPT has no command line on the Mac, so it is not offered.
 Status: done
 
+### S-043 Subtasks and richer cards
+As the user, I break a task into subtasks in its detail, tick them off, and see "2/5" on the row and a progress bar on the card. Cards also show the first line of notes, a complete circle on hover, an overdue date in red, and a shadow on hover.
+Screens: board, today
+Depends: S-034, S-040
+Acceptance:
+- [unit] Checklist.parse splits on ; and newlines; progress counts; index finds by number or words.
+- [self] subtasks persist with their done state; "add a subtask to X: Y" appends one.
+- [self] CLI: tasks add --subtasks, tasks update --subtasks, --check, --uncheck; JSON carries subtasks.
+Status: done
+
 ### S-042 Hand a task to a sandboxed agent
 As the user, I hand a task with its notes to an agent that works on it in a sandbox for the long run, and see its progress and result on the card.
 Screens: board

@@ -101,21 +101,64 @@ struct BoardCard: View {
     @Environment(AppModel.self) private var model
     let task: TaskItem
     let accent: Color
+    @State private var hovering = false
 
     private var selected: Bool { model.selection == task.id }
+    private var overdue: Bool { task.due.map { !task.isDone && $0 < Calendar.current.startOfDay(for: .now) } ?? false }
+    private var progress: (done: Int, total: Int) { Checklist.progress(task.checklist) }
+    private var firstNoteLine: String? {
+        task.notes.split(whereSeparator: \.isNewline).first.map(String.init)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: Space.sm) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(accent)
                 .frame(width: Space.xs)
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text(task.title)
-                    .strikethrough(task.isDone)
-                    .lineLimit(3)
+            VStack(alignment: .leading, spacing: Space.sm) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                    Button {
+                        if task.isDone { model.undoComplete() } else { model.complete(task) }
+                    } label: {
+                        Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(task.isDone ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(hovering || task.isDone ? 1 : 0.4)
+                    .help(task.isDone ? "Done" : "Complete")
+                    Text(task.title)
+                        .font(.body.weight(.medium))
+                        .strikethrough(task.isDone)
+                        .foregroundStyle(task.isDone ? .secondary : .primary)
+                        .lineLimit(3)
+                }
+                if let line = firstNoteLine, !task.isDone {
+                    Text(line)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                if progress.total > 0 {
+                    HStack(spacing: Space.sm) {
+                        ProgressView(value: Double(progress.done), total: Double(progress.total))
+                            .progressViewStyle(.linear)
+                            .controlSize(.small)
+                        Text("\(progress.done)/\(progress.total)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                    .help("\(progress.done) of \(progress.total) subtasks done")
+                }
                 HStack(spacing: Space.sm) {
                     if let due = task.due {
-                        Label(due.formatted(.dateTime.month(.abbreviated).day()), systemImage: "calendar")
+                        Label(DayGroup.label(for: due), systemImage: "calendar")
+                            .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    if model.session?.task == task {
+                        Label("Live", systemImage: "timer").foregroundStyle(.tint)
                     }
                     if task.recordsSession {
                         Label("Records", systemImage: "record.circle")
@@ -127,23 +170,23 @@ struct BoardCard: View {
                         PriorityFlag(priority: task.priority)
                             .labelStyle(.iconOnly)
                     }
-                    if model.session?.task == task {
-                        Label("Live", systemImage: "timer").foregroundStyle(.tint)
-                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .labelStyle(.titleAndIcon)
             }
-            Spacer(minLength: 0)
         }
         .padding(Space.sm)
+        .padding(.trailing, Space.xs)
         .fixedSize(horizontal: false, vertical: true)   // the stripe has no height of its own; the text sets the card's
         .background(.background, in: RoundedRectangle(cornerRadius: Space.sm))
         .overlay(RoundedRectangle(cornerRadius: Space.sm).strokeBorder(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary), lineWidth: selected ? 2 : 1))
+        .shadow(color: .black.opacity(hovering ? 0.12 : 0.04), radius: hovering ? Space.sm : 2, y: 1)
+        .onHover { hovering = $0 }
+        .animation(.default, value: hovering)
         .popover(isPresented: Binding(get: { selected }, set: { if !$0, selected { model.selection = nil } }), arrowEdge: .trailing) {
             TaskDetail(task: task)
-                .frame(width: 380, height: 520)
+                .frame(width: 380, height: 560)
         }
         .contextMenu {
             Button("Complete") { model.complete(task) }.disabled(task.isDone)

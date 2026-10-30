@@ -148,6 +148,13 @@ struct TaskRow: View {
                     .labelStyle(.iconOnly)
                     .font(.caption)
             }
+            if !task.checklist.isEmpty {
+                let progress = Checklist.progress(task.checklist)
+                Label("\(progress.done)/\(progress.total)", systemImage: "checklist")
+                    .font(.caption)
+                    .foregroundStyle(progress.done == progress.total ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                    .help("\(progress.done) of \(progress.total) subtasks done")
+            }
             if showProject, let project = task.project {
                 Image(systemName: "circle.fill")
                     .font(.caption2)
@@ -162,6 +169,7 @@ struct TaskDetail: View {
     @Environment(AppModel.self) private var model
     @Query(sort: \Project.createdAt) private var projects: [Project]
     @Bindable var task: TaskItem
+    @State private var newSubtask = ""
 
     var body: some View {
         Form {
@@ -180,6 +188,42 @@ struct TaskDetail: View {
             Toggle("Someday", isOn: $task.isSomeday)
             Picker("Priority", selection: $task.priority) {
                 ForEach(Priority.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+            Section {
+                ForEach($task.checklist) { $item in
+                    HStack(spacing: Space.sm) {
+                        Toggle("Done", isOn: $item.isDone)
+                            .labelsHidden()
+                            .toggleStyle(.checkbox)
+                        TextField("Subtask", text: $item.title, prompt: Text("Subtask"))
+                            .labelsHidden()
+                            .textFieldStyle(.plain)
+                            .strikethrough(item.isDone)
+                            .foregroundStyle(item.isDone ? .secondary : .primary)
+                        Button("Remove", systemImage: "xmark.circle.fill") { task.checklist.removeAll { $0.id == item.id } }
+                            .buttonStyle(.borderless)
+                            .labelStyle(.iconOnly)
+                            .foregroundStyle(.tertiary)
+                            .help("Remove this subtask")
+                    }
+                }
+                HStack(spacing: Space.sm) {
+                    Image(systemName: "plus.circle").foregroundStyle(.tertiary)
+                    TextField("Add a subtask", text: $newSubtask, prompt: Text("Add a subtask, Return to save"))
+                        .labelsHidden()
+                        .textFieldStyle(.plain)
+                        .onSubmit {
+                            if let clean = TaskTitle.clean(newSubtask) { task.checklist.append(ChecklistItem(title: clean)) }
+                            newSubtask = ""
+                        }
+                }
+            } header: {
+                let progress = Checklist.progress(task.checklist)
+                HStack {
+                    Text("Subtasks")
+                    Spacer()
+                    if progress.total > 0 { Text("\(progress.done) of \(progress.total)").foregroundStyle(.secondary) }
+                }
             }
             Section("Sessions") {
                 Toggle("Record the screen during sessions", isOn: $task.recordsSession)
