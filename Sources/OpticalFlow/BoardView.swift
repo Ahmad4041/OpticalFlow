@@ -120,9 +120,12 @@ struct BoardCard: View {
                     if task.recordsSession {
                         Label("Records", systemImage: "record.circle")
                             .foregroundStyle(.red)
+                            .labelStyle(.iconOnly)
+                            .help("Sessions on this task record the screen")
                     }
                     if task.priority != .none {
                         PriorityFlag(priority: task.priority)
+                            .labelStyle(.iconOnly)
                     }
                     if model.session?.task == task {
                         Label("Live", systemImage: "timer").foregroundStyle(.tint)
