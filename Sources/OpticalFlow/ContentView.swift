@@ -8,14 +8,29 @@ struct ContentView: View {
     @Environment(\.openSettings) private var openSettings
     @State private var projectName = ""
 
+    @State private var bootstrapped = false
+
     var body: some View {
-        NavigationSplitView {
-            Sidebar()
-        } content: {
-            ContentColumn()
-                .navigationSplitViewColumnWidth(min: 320, ideal: 400)
-        } detail: {
-            DetailColumn()
+        Group {
+            if case .project(let id) = model.sidebar, model.showsBoard, let project = model.project(id) {
+                // Board mode: two columns, so the board gets the whole width. Cards open a popover.
+                NavigationSplitView {
+                    Sidebar()
+                } detail: {
+                    BoardView(project: project)
+                        .navigationTitle(project.name)
+                        .toolbar { ViewModeToolbar() }
+                }
+            } else {
+                NavigationSplitView {
+                    Sidebar()
+                } content: {
+                    ContentColumn()
+                        .navigationSplitViewColumnWidth(min: 320, ideal: 400)
+                } detail: {
+                    DetailColumn()
+                }
+            }
         }
         .toolbar { sessionToolbar }
         .alert(promptTitle, isPresented: Binding(get: { model.projectPrompt != nil },
@@ -31,6 +46,9 @@ struct ContentView: View {
             if case .rename(let project) = model.projectPrompt { projectName = project.name }
         }
         .task {
+            // The split view swaps between list and board mode; the hooks below run once.
+            guard !bootstrapped else { return }
+            bootstrapped = true
             AgentRouter.model = model
             AgentSocket.listen { AgentRouter.handle($0) }
             SeedData.insertIfRequested(into: model)
@@ -172,10 +190,7 @@ struct DetailColumn: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        if case .project(let id) = model.sidebar, model.showsBoard, let project = model.project(id) {
-            // The board takes the wide column; a card's detail opens as a popover from the card.
-            BoardView(project: project)
-        } else if let task = model.selectedTask {
+        if let task = model.selectedTask {
             TaskDetail(task: task)
         } else if let recording = model.selectedRecording {
             RecordingDetail(recording: recording)
