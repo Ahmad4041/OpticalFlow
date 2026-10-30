@@ -162,6 +162,18 @@ final class AppModel {
         return all.filter { visible($0, on: page) }
     }
 
+    /// The task the Focus view offers to start: a Doing task, else the first open task,
+    /// on the current page, then Today, then Inbox.
+    var upNext: TaskItem? {
+        var pages: [Page] = [.list(.today), .list(.inbox)]
+        if let sidebar, sidebar.showsTasks { pages.insert(sidebar, at: 0) }
+        for page in pages {
+            let open = tasks(for: page).filter { !$0.isDone }
+            if let task = open.first(where: \.isDoing) ?? open.first { return task }
+        }
+        return nil
+    }
+
     /// Open tasks whose title or notes contain the words of `search`, any order, case-insensitive.
     func matches(_ task: TaskItem) -> Bool {
         let words = search.split(whereSeparator: \.isWhitespace).map { $0.lowercased() }

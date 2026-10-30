@@ -312,6 +312,16 @@ Acceptance:
 UX: 25 commands; the skill file in .claude/skills/opticalflow tells agents the rules. MCP registration is one line, documented there.
 Status: done
 
+### S-038 Focus view in the detail column
+As the user, with nothing selected I see the running session as a large ring with Pause, Stop, Record, and Done, or, when idle, today's focused time, sessions, and tasks done, and the next task with one Start button.
+Screens: focus, focus-running
+Depends: S-005, S-035
+Acceptance:
+- [self] upNext is the Doing task on the page, else the first open task, else Today's, else Inbox's.
+- [snap] focus and focus-running, light and dark.
+UX: replaces the "No Selection" placeholder. Start on the card runs the session; the Record switch flags the task. Done completes the task and stops the session.
+Status: done
+
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
 As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.

@@ -197,8 +197,7 @@ struct DetailColumn: View {
         } else if let session = model.selectedSession {
             SessionDetail(session: session)
         } else {
-            ContentUnavailableView("No Selection", systemImage: "sidebar.right")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            FocusView()
         }
     }
 }

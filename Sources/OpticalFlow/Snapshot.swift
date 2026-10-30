@@ -50,6 +50,24 @@ enum Snapshot {
                 }
                 model.showsBoard = false
             }
+            if only == nil || only?.contains("focus") == true {
+                // The detail column with nothing selected: idle, then a running session.
+                model.sidebar = .list(.today)
+                model.selection = nil
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/focus-\(mode).png")
+                }
+                model.startSession(on: model.upNext)
+                model.selection = nil
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/focus-running-\(mode).png")
+                }
+                model.stopSession()
+            }
             if only == nil || only?.contains("quickentry") == true {
                 model.quickEntry.show()
                 try? await Task.sleep(for: .seconds(0.8))

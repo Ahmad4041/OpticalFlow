@@ -212,6 +212,15 @@ enum SelfTest {
         check("S-034 Done column completes", task.isDone)
         model.move([task.uuid.uuidString], toColumn: .todo)
         check("S-034 To Do column reopens", !task.isDone && !task.isSomeday && task.boardColumn == .todo)
+        // S-038: the Focus view offers the Doing task on the current page, else the first open one.
+        model.sidebar = .project(projectID)
+        model.selection = nil
+        check("S-038 Focus offers the first open task on the page", model.upNext == task, model.upNext?.title ?? "nil")
+        model.move([task.uuid.uuidString], toColumn: .doing)
+        check("S-038 a Doing task comes first", model.upNext == task && task.isDoing)
+        model.sidebar = .sessions
+        check("S-038 pages without tasks fall back to Today", model.upNext.map { model.tasks(for: .list(.today)).contains($0) } == true, model.upNext?.title ?? "nil")
+        model.sidebar = .project(projectID)
         let picks = model.recorder.pickRequests
         model.startSession(on: task)
         check("S-035 a session puts the task in Doing", task.isDoing)
