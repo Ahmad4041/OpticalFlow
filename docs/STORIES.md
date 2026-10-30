@@ -263,6 +263,14 @@ Acceptance:
 UX: Off by default and explained in the toggle's help, because it needs the Screen Recording permission the picker avoids. The file keeps one size; a display with another aspect is scaled by ScreenCaptureKit.
 Status: done
 
+### S-033 Recording thumbnails and richer session rows
+As the user, I recognise recordings by a still from the video and sessions by their project colour and done state.
+Screens: recordings, sessions
+Acceptance:
+- [snap] Each recording row shows a 64x36 still; each session row shows the project dot (or a check when the task is done) and the project name.
+UX: Thumbnails come from AVAssetImageGenerator at one second in, cached for the app's run. A missing file shows a film symbol.
+Status: done
+
 ## M5 System
 ### S-020 App Intents: start/stop session for Shortcuts and Apple Focus. Status: todo
 ### S-021 Always-on-top mini timer window. Status: todo
@@ -272,7 +280,11 @@ Status: done
 ### S-023 Drag tasks between lists and projects. Status: todo
 ### S-024 Context menus on task and project rows. Status: todo
 ### S-025 Empty states per page. Status: todo
-### S-026 App icon. Status: todo
+### S-026 App icon
+Screens: dock
+Acceptance:
+- [manual] tools/icon_review.sh shows a timer ring with a record dot over three flow arcs, readable at 16 pt, in default, dark, tinted, and clear looks.
+Status: done
 ### S-027 Export preset 1080p H.264 for YouTube. Status: todo
 
 ## Dropped

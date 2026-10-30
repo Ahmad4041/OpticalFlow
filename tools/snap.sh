@@ -12,7 +12,8 @@ rm -rf ~/Library/Saved\ Application\ State/com.ahmadnaeem.opticalflow.savedState
 # Seed data only fills an empty store, so start from nothing.
 rm -f $store $store-shm $store-wal $log
 rm -rf $shots
-pages=${APP_SNAPSHOT_PAGES:-}
-open -W -n --stdout $log --stderr $log --env APP_STORE=$store --env APP_SEED=1 --env APP_SNAPSHOT=$shots \
-  ${pages:+--env APP_SNAPSHOT_PAGES=$pages} ${APP_ACCENT:+--env APP_ACCENT=$APP_ACCENT} ~/Applications/OpticalFlow.app
+extra=()
+[[ -n "${APP_SNAPSHOT_PAGES:-}" ]] && extra+=(--env "APP_SNAPSHOT_PAGES=$APP_SNAPSHOT_PAGES")
+[[ -n "${APP_ACCENT:-}" ]] && extra+=(--env "APP_ACCENT=$APP_ACCENT")
+open -W -n --stdout $log --stderr $log --env APP_STORE=$store --env APP_SEED=1 --env APP_SNAPSHOT=$shots "${extra[@]}" ~/Applications/OpticalFlow.app
 cat $log

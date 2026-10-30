@@ -335,11 +335,18 @@ struct SessionList: View {
         List(sessions) { session in
             let seconds = session == model.session ? model.elapsed : session.seconds
             HStack(spacing: Space.sm) {
+                Image(systemName: session.task?.isDone == true ? "checkmark.circle.fill" : "circle.fill")
+                    .foregroundStyle(session.task?.project?.color ?? Color.secondary)
+                    .font(session.task?.isDone == true ? .body : .caption2)
+                    .frame(width: Space.xl)
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text(session.task?.title ?? "No task")
-                    Text(session.startedAt, format: .dateTime.month(.abbreviated).day().hour().minute())
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: Space.xs) {
+                        if let project = session.task?.project { Text(project.name).foregroundStyle(project.color) }
+                        Text(session.startedAt, format: .dateTime.month(.abbreviated).day().hour().minute())
+                    }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                 }
                 Spacer()
                 if session.endedAt == nil {

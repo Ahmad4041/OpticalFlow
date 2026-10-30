@@ -11,20 +11,24 @@ struct RecordingList: View {
     var body: some View {
         @Bindable var model = model
         List(recordings, selection: $model.selection) { recording in
-            HStack(spacing: Space.sm) {
+            HStack(spacing: Space.md) {
+                RecordingThumbnail(url: recording.fileExists ? recording.url : nil)
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text(recording.title)
-                    Text(recording.startedAt, format: .dateTime.month(.abbreviated).day().hour().minute())
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if recording == model.recorder.recording {
-                    Image(systemName: "record.circle").foregroundStyle(.red)
-                }
-                Text(Countdown.clock(Int(recording.duration), padded: false))
-                    .monospacedDigit()
+                        .lineLimit(2)
+                    HStack(spacing: Space.xs) {
+                        if recording == model.recorder.recording {
+                            Image(systemName: "record.circle").foregroundStyle(.red)
+                        }
+                        Text(Countdown.clock(Int(recording.duration), padded: false))
+                            .monospacedDigit()
+                        Text("·")
+                        Text(recording.startedAt, format: .dateTime.month(.abbreviated).day().hour().minute())
+                    }
+                    .font(.callout)
                     .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: Space.xs)
                 Button("Open", systemImage: "play.rectangle") { recording.open() }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
@@ -146,6 +150,39 @@ struct RecordingDetail: View {
                 model.selection = new.id
             } catch {
                 exportError = error.localizedDescription
+            }
+        }
+    }
+}
+
+/// A small still from the recording, loaded once and kept for the session.
+struct RecordingThumbnail: View {
+    let url: URL?
+    @State private var image: NSImage?
+    static let size = CGSize(width: 64, height: 36)
+    nonisolated(unsafe) private static var cache: [URL: NSImage] = [:]   // ponytail: unbounded in-memory cache; one entry per recording row
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Space.xs).fill(.quaternary)
+            if let image {
+                Image(nsImage: image).resizable().scaledToFill()
+            } else {
+                Image(systemName: "film").foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: Self.size.width, height: Self.size.height)
+        .clipShape(RoundedRectangle(cornerRadius: Space.xs))
+        .task(id: url) {
+            guard let url else { image = nil; return }
+            if let cached = Self.cache[url] { image = cached; return }
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: Self.size.width * 2, height: Self.size.height * 2)
+            if let cg = try? await generator.image(at: CMTime(seconds: 1, preferredTimescale: 600)).image {
+                let made = NSImage(cgImage: cg, size: Self.size)
+                Self.cache[url] = made
+                image = made
             }
         }
     }
