@@ -313,6 +313,29 @@ enum SelfTest {
         model.delete(invoice)
         model.delete(rent)
 
+        // S-042: a hand-off's worktree, summary, and discard, on a throwaway repo.
+        let repo = "/tmp/OpticalFlow-selftest-repo"
+        try? FileManager.default.removeItem(atPath: repo)
+        try? FileManager.default.removeItem(at: Worktree.root)
+        try? FileManager.default.createDirectory(atPath: repo, withIntermediateDirectories: true)
+        _ = try? Worktree.git(["init", "-q", "-b", "main"], in: repo)
+        _ = try? Worktree.git(["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "init"], in: repo)
+        check("S-042 a folder with .git is a repository", Worktree.isRepository(repo) && !Worktree.isRepository("/tmp"))
+        let wt = try? Worktree.create(repo: repo, id: "abcd1234")
+        check("S-042 the worktree is outside the repo on its own branch", wt != nil && wt!.path.hasPrefix(Worktree.root.path) && (try? Worktree.git(["rev-parse", "--abbrev-ref", "HEAD"], in: wt!.path)) == "opticalflow/abcd1234")
+        check("S-042 no commits means not done", Worktree.summary(repo: repo, id: "abcd1234").commits == 0)
+        try? "hello".write(toFile: wt!.appending(path: "a.txt").path, atomically: true, encoding: .utf8)
+        _ = try? Worktree.git(["add", "."], in: wt!.path)
+        _ = try? Worktree.git(["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "work"], in: wt!.path)
+        let summary = Worktree.summary(repo: repo, id: "abcd1234")
+        check("S-042 the branch summary counts commits and files", summary.commits == 1 && summary.stat.contains("1 file"), "\(summary)")
+        Worktree.discard(repo: repo, id: "abcd1234")
+        check("S-042 discard removes the folder and the branch", !FileManager.default.fileExists(atPath: wt!.path) && (try? Worktree.git(["rev-parse", "--verify", "--quiet", "refs/heads/opticalflow/abcd1234"], in: repo)) == nil)
+        guard let handed = model.addTask(title: "Agent task", on: .list(.inbox)) else { return check("S-042 add", false) }
+        check("S-042 a task without a repository explains what to set", (try? model.voice.handoff(handed)) == nil)
+        model.delete(handed)
+        try? FileManager.default.removeItem(atPath: repo)
+
         // S-043: subtasks.
         guard let steps = model.addTask(title: "Ship the release", on: .list(.inbox)) else { return check("S-043 add", false) }
         steps.subtasks = Checklist.parse("Tag it; Build; Upload")

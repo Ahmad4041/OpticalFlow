@@ -47,6 +47,18 @@ enum Orchestrator: String, CaseIterable, Identifiable {
 
     var isInstalled: Bool { self == .builtin || path != nil }
 
+    /// A long run in a worktree: edits allowed, capped by turns and dollars, commits but never pushes.
+    func handoffArguments(prompt: String) -> [String] {
+        switch self {
+        case .builtin: []
+        case .claude: ["-p", prompt, "--output-format", "stream-json", "--verbose", "--permission-mode", "acceptEdits",
+                       "--max-turns", "80", "--max-budget-usd", "5",
+                       "--allowedTools", "Bash,Read,Edit,Write,MultiEdit,Glob,Grep,LS",
+                       "--disallowedTools", "WebFetch,WebSearch,Bash(git push:*),Bash(git merge:*),Bash(git checkout:*),Bash(git switch:*)"]
+        case .codex: ["exec", "--json", "--skip-git-repo-check", "-s", "workspace-write", "--color", "never", prompt]
+        }
+    }
+
     func arguments(prompt: String, workdir: String) -> [String] {
         switch self {
         case .builtin: []
@@ -74,6 +86,10 @@ final class AgentJob: Identifiable {
     var taskIDs: Set<String> = []
     /// The task selected when the request was made, if any.
     var contextTaskID: String?
+    /// A hand-off: the repo and worktree the agent works in. nil for a plain voice request.
+    var repo: String?
+    var worktree: URL?
+    var costUSD: Double?
     @ObservationIgnored var process: Process?
 
     init(request: String, orchestrator: Orchestrator, contextTaskID: String?) {
@@ -81,6 +97,8 @@ final class AgentJob: Identifiable {
         self.orchestrator = orchestrator
         self.contextTaskID = contextTaskID
     }
+
+    var isHandoff: Bool { repo != nil }
 
     var running: Bool { finishedAt == nil }
     var seconds: Int { Int((finishedAt ?? .now).timeIntervalSince(startedAt)) }
@@ -397,6 +415,49 @@ final class VoiceAgent {
         }
     }
 
+    /// Hands a task to the agent in its own git worktree of the project's repository.
+    /// Progress and the answer land on the card like any job; the branch stays for the user to open or discard.
+    func handoff(_ task: TaskItem) throws {
+        guard let project = task.project, let repo = project.repoPath else {
+            throw HandoffError.message("Set the project's repository folder first (right-click the project in the sidebar).")
+        }
+        guard Worktree.isRepository(repo) else { throw HandoffError.message("\(repo) is not a git repository.") }
+        let which = orchestrator == .builtin ? (Orchestrator.claude.isInstalled ? Orchestrator.claude : .codex) : orchestrator
+        guard which.isInstalled else { throw VoiceError.notInstalled(which.title) }
+        let id = String(task.agentID.prefix(8))
+        let folder = try Worktree.create(repo: repo, id: id)
+        let job = AgentJob(request: "Work on “\(task.title)”", orchestrator: which, contextTaskID: id)
+        job.repo = repo
+        job.worktree = folder
+        job.taskIDs = [id]
+        jobs.append(job)
+        task.agentBranch = Worktree.branch(for: id)
+        task.agentReply = nil
+        task.isDoing = true
+        model.save()
+        let prompt = HandoffPrompt.text(task: task, project: project)
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.run(job, prompt: prompt)
+            } catch {
+                job.error = error.localizedDescription
+            }
+            job.finishedAt = .now
+            // Done is what the branch says, not what the agent says.
+            let summary = Worktree.summary(repo: repo, id: id)
+            if summary.commits == 0, job.error == nil {
+                job.error = "The agent finished without committing anything. " + job.reply
+            } else if job.error == nil {
+                job.reply = "\(summary.commits) commit\(summary.commits == 1 ? "" : "s") on \(Worktree.branch(for: id))" +
+                    (summary.stat.isEmpty ? "" : ", \(summary.stat)") +
+                    (job.costUSD.map { String(format: ", $%.2f", $0) } ?? "") + ".\n" + job.reply
+            }
+            self.attach(job)
+            self.mirror(job)
+        }
+    }
+
     /// Writes the job's answer onto the tasks it touched (ids in its commands, the selected task,
     /// and tasks it created), and tells the user when the panel is closed.
     func attach(_ job: AgentJob) {
@@ -438,8 +499,8 @@ final class VoiceAgent {
         try? FileManager.default.createDirectory(atPath: workdir, withIntermediateDirectories: true)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
-        process.arguments = which.arguments(prompt: prompt, workdir: workdir)
-        process.currentDirectoryURL = URL(fileURLWithPath: workdir)
+        process.arguments = job.isHandoff ? which.handoffArguments(prompt: prompt) : which.arguments(prompt: prompt, workdir: workdir)
+        process.currentDirectoryURL = job.worktree ?? URL(fileURLWithPath: workdir)
         var env = ProcessInfo.processInfo.environment
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         env["PATH"] = [env["PATH"] ?? "/usr/bin:/bin", "\(home)/.local/bin", "/usr/local/bin", "/opt/homebrew/bin"].joined(separator: ":")
@@ -462,6 +523,10 @@ final class VoiceAgent {
                 mirror(job)
             }
             if let final = Self.answer(in: event) { answer = final }
+            if event["type"] as? String == "result", let cost = event["total_cost_usd"] as? Double { job.costUSD = cost }
+            if event["type"] as? String == "turn.completed", let usage = event["usage"] as? [String: Any], let tokens = usage["output_tokens"] as? Int {
+                job.steps.append("\(tokens) output tokens")
+            }
         }
         let errors = String(decoding: await stderr, as: UTF8.self)
         process.waitUntilExit()
@@ -776,6 +841,7 @@ struct AgentJobsList: View {
                             .foregroundStyle(job.running ? AnyShapeStyle(.tint) : job.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
                             .symbolEffect(.pulse, isActive: job.running)
                         Text(job.request).lineLimit(2)
+                        if job.isHandoff { Image(systemName: "arrow.triangle.branch").foregroundStyle(.secondary).help("In a worktree") }
                         Spacer()
                         Text(job.running ? "\(job.seconds) s" : job.orchestrator.title).font(.caption).foregroundStyle(.tertiary)
                     }

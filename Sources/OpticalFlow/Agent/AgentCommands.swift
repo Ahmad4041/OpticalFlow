@@ -129,6 +129,13 @@ enum AgentCommands {
             }
             return task.agentJSON
         },
+        AgentCommand(name: "tasks handoff", summary: "Hand a task to Claude Code or Codex in its own git worktree of the project's repository. Progress and the result land on the card; read them with agent jobs.",
+                     params: [.init(name: "id", required: true, positional: true, help: "the task id")],
+                     example: "opticalflow tasks handoff 3f2a9c1e --json") { args, model in
+            let task = try findTask(try args.required("id"), in: model)
+            do { try model.voice.handoff(task) } catch { throw AgentError.invalid(error.localizedDescription) }
+            return ["started": true, "branch": task.agentBranch ?? "", "orchestrator": model.voice.jobs.last?.orchestrator.rawValue ?? ""]
+        },
         AgentCommand(name: "tasks delete", summary: "Delete a task.",
                      params: [.init(name: "id", required: true, positional: true, help: "the task id")],
                      example: "opticalflow tasks delete 3f2a9c1e --yes --json", destructive: true) { args, model in
@@ -152,6 +159,18 @@ enum AgentCommands {
             model.projectPrompt = .new
             model.commitProjectPrompt(name: try args.required("name"))
             guard case .project(let id)? = model.sidebar, let project = model.project(id) else { throw AgentError.invalid("--name cannot be empty") }
+            return project.agentJSON
+        },
+        AgentCommand(name: "projects update", summary: "Change a project: its repository folder for agent hand-offs.",
+                     params: [.init(name: "id", required: true, positional: true, help: "a project id or name"),
+                              .init(name: "repo", help: "path of the git repository, or \"none\"")],
+                     example: "opticalflow projects update OpticalFlow --repo ~/code/opticalflow --json") { args, model in
+            let project = try findProject(try args.required("id"), in: model)
+            if let repo = args.string("repo") {
+                let path = (repo as NSString).expandingTildeInPath
+                if repo != "none", !Worktree.isRepository(path) { throw AgentError.invalid("\(path) is not a git repository") }
+                model.setRepository(repo == "none" ? nil : path, for: project)
+            }
             return project.agentJSON
         },
         AgentCommand(name: "projects board", summary: "A project's board: tasks per column.",
@@ -415,6 +434,7 @@ extension TaskItem: AgentIdentified {
         if let due { json["due"] = JSON.date(due) }
         if let deadline { json["deadline"] = JSON.date(deadline) }
         if repeatRule != .none { json["repeat"] = repeatRule.rawValue }
+        if let agentBranch { json["branch"] = agentBranch }
         if let project { json["project"] = project.name; json["projectId"] = String(project.agentID.prefix(8)) }
         if let completedAt { json["completedAt"] = JSON.date(completedAt) }
         return json
@@ -423,7 +443,11 @@ extension TaskItem: AgentIdentified {
 
 extension Project: AgentIdentified {
     nonisolated var agentID: String { uuid.uuidString.lowercased().replacingOccurrences(of: "-", with: "") }
-    nonisolated var agentJSON: JSONObject { ["id": String(agentID.prefix(8)), "name": name, "color": colorName, "open": openCount] }
+    nonisolated var agentJSON: JSONObject {
+        var json: JSONObject = ["id": String(agentID.prefix(8)), "name": name, "color": colorName, "open": openCount]
+        if let repoPath { json["repo"] = repoPath }
+        return json
+    }
 }
 
 extension Recording: AgentIdentified {

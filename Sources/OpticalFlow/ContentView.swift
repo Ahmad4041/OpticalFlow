@@ -171,6 +171,10 @@ struct Sidebar: View {
                             model.draftTitle = ""
                         }
                         Button("Rename…") { model.projectPrompt = .rename(project) }
+                        Button(project.repoPath == nil ? "Set Repository Folder…" : "Change Repository Folder…") { model.chooseRepository(for: project) }
+                        if let repo = project.repoPath {
+                            Button("Forget Repository (\((repo as NSString).lastPathComponent))") { model.setRepository(nil, for: project) }
+                        }
                         Divider()
                         Button("Delete", role: .destructive) { model.deleteProject(project) }
                     }

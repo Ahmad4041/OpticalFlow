@@ -9,6 +9,8 @@ final class Project {
     var colorName: String = ProjectColor.blue.rawValue
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
+    /// The git repository an agent works in when a task is handed over. Optional: set per project.
+    var repoPath: String?
     @Relationship(deleteRule: .nullify, inverse: \TaskItem.project) var tasks: [TaskItem] = []
 
     init(name: String, color: ProjectColor = .blue) {
@@ -62,6 +64,8 @@ final class TaskItem {
     var deadline: Date?
     /// RepeatRule.rawValue; completing a repeating task moves it forward instead of closing it.
     var repeatRaw: String = "none"
+    /// Set while or after an agent worked on this task in a worktree: the branch name.
+    var agentBranch: String?
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?

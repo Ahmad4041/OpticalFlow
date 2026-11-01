@@ -38,6 +38,7 @@ struct TaskList: View {
                 Button("Start Session") { model.startSession(on: task) }
                 Toggle("Record Sessions", isOn: Binding(get: { task.recordsSession }, set: { task.recordsSession = $0; model.save() }))
                 PriorityMenu(task: task)
+                HandoffButton(task: task)
                 Divider()
                 Button("Due Today") { model.move([task.uuid.uuidString], to: .list(.today)) }
                 Button("Due Tomorrow") { model.move([task.uuid.uuidString], to: .list(.upcoming)) }
@@ -189,6 +190,8 @@ struct TaskDetail: View {
     @Query(sort: \Project.createdAt) private var projects: [Project]
     @Bindable var task: TaskItem
     @State private var newSubtask = ""
+    @State private var confirmDiscard = false
+    @State private var handoffError: String?
 
     var body: some View {
         Form {
@@ -256,10 +259,30 @@ struct TaskDetail: View {
                 Toggle("Record the screen during sessions", isOn: $task.recordsSession)
                 Toggle("Doing (on the board)", isOn: $task.isDoing)
             }
-            if let reply = task.agentReply, !reply.isEmpty {
+            if task.agentBranch != nil || task.agentReply?.isEmpty == false {
                 Section {
-                    Text(reply).textSelection(.enabled)
-                    Button("Clear", systemImage: "xmark") { task.agentReply = nil; task.agentReplyAt = nil }
+                    if let reply = task.agentReply, !reply.isEmpty { Text(reply).textSelection(.enabled) }
+                    if let branch = task.agentBranch {
+                        let summary = model.branchSummary(for: task)
+                        LabeledContent("Branch", value: branch)
+                        if let summary {
+                            LabeledContent("Changes", value: summary.commits == 0 ? "No commits yet" : "\(summary.commits) commits. \(summary.stat)")
+                        }
+                        HStack {
+                            Button("Open Pull Request", systemImage: "arrow.triangle.pull") {
+                                do { try model.openPullRequest(for: task) } catch { handoffError = error.localizedDescription }
+                            }
+                            .disabled((summary?.commits ?? 0) == 0)
+                            Button("Reveal Worktree", systemImage: "folder") { model.revealWorktree(for: task) }
+                            Button("Discard Branch", systemImage: "trash", role: .destructive) { confirmDiscard = true }
+                        }
+                        .confirmationDialog("Discard the branch and worktree? Uncommitted work is lost.", isPresented: $confirmDiscard) {
+                            Button("Discard", role: .destructive) { model.discardBranch(for: task) }
+                        }
+                        if let handoffError { Text(handoffError).foregroundStyle(.red).font(.callout) }
+                    } else {
+                        Button("Clear", systemImage: "xmark") { task.agentReply = nil; task.agentReplyAt = nil }
+                    }
                 } header: {
                     HStack {
                         Label("AI", systemImage: "sparkles")
@@ -275,8 +298,32 @@ struct TaskDetail: View {
             Section {
                 Button("Start Session", systemImage: "play.fill") { model.startSession(on: task) }
                     .disabled(model.session?.task == task)
+                HandoffButton(task: task)
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// "Hand to Agent": starts a worktree run on this task, or explains what is missing.
+struct HandoffButton: View {
+    @Environment(AppModel.self) private var model
+    let task: TaskItem
+    @State private var error: String?
+
+    private var running: Bool {
+        let id = String(task.agentID.prefix(8))
+        return model.voice.runningJobs.contains { $0.isHandoff && $0.contextTaskID == id }
+    }
+
+    var body: some View {
+        Button(running ? "Agent Is Working…" : "Hand to Agent", systemImage: "sparkles") {
+            do { try model.voice.handoff(task) } catch { self.error = error.localizedDescription }
+        }
+        .disabled(running || task.isDone)
+        .help(task.project?.repoPath == nil ? "Set the project's repository folder first (right-click the project)" : "Run Claude Code or Codex on this task in its own git worktree")
+        .alert("Cannot hand off", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("OK") {}
+        } message: { Text(error ?? "") }
     }
 }

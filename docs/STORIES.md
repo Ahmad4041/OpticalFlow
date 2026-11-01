@@ -414,12 +414,15 @@ Acceptance:
 UX: Deadline switch and Repeat picker in the detail; checkered flag on rows and cards, red when missed; repeat icon on the date. CLI --deadline and --repeat.
 Status: done
 
-### S-042 Hand a task to a sandboxed agent
-As the user, I hand a task with its notes to an agent that works on it in a sandbox for the long run, and see its progress and result on the card.
-Screens: board
-Depends: S-041
-Acceptance: to write with the user: which runtime (Claude Code or Codex in a container or a separate checkout), what "done" means, how results come back (notes, a recording, a PR link).
-Status: planned
+### S-042 Hand a task to an agent in a worktree
+As the user, I set a project's repository folder once, then "Hand to Agent" on any task: Claude Code (or Codex) works on it in its own git worktree and branch, the card shows the steps as they run, and when it finishes the card shows the commits, the diff size and the cost. I open a draft pull request or discard the branch; the app never merges.
+Screens: board, today
+Depends: S-041, S-047
+Acceptance:
+- [self] Worktree.create makes a branch and a folder outside the repo; summary counts commits; discard removes both; a task without a repository explains what to set.
+- [manual] a real hand-off on this repo commits on opticalflow/<id> and the card shows "N commits, M files changed, $cost".
+UX: Task menu and card menu, Task > Hand to Agent (Option-Command-H), `opticalflow tasks handoff <id>`, `projects update --repo`. Done is the branch, not the agent's word: no commits means "finished without committing". Runs are capped at 80 turns and $5; git push, merge, checkout and web tools are disallowed.
+Status: done
 
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control

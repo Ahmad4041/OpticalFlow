@@ -425,6 +425,45 @@ final class AppModel {
         }
     }
 
+    /// Asks for the project's repository folder with the system open panel.
+    func chooseRepository(for project: Project) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.prompt = "Use This Repository"
+        panel.message = "The git repository agents work in for “\(project.name)”."
+        if let current = project.repoPath { panel.directoryURL = URL(fileURLWithPath: current) }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        setRepository(url.path, for: project)
+    }
+
+    func setRepository(_ path: String?, for project: Project) {
+        project.repoPath = path
+        save()
+    }
+
+    /// Branch summary for a task an agent worked on, nil when there is none.
+    func branchSummary(for task: TaskItem) -> (commits: Int, stat: String, base: String)? {
+        guard task.agentBranch != nil, let repo = task.project?.repoPath else { return nil }
+        return Worktree.summary(repo: repo, id: String(task.agentID.prefix(8)))
+    }
+
+    func openPullRequest(for task: TaskItem) throws {
+        guard let repo = task.project?.repoPath else { return }
+        try Worktree.openPullRequest(repo: repo, id: String(task.agentID.prefix(8)))
+    }
+
+    func discardBranch(for task: TaskItem) {
+        guard let repo = task.project?.repoPath else { return }
+        Worktree.discard(repo: repo, id: String(task.agentID.prefix(8)))
+        task.agentBranch = nil
+        save()
+    }
+
+    func revealWorktree(for task: TaskItem) {
+        NSWorkspace.shared.activateFileViewerSelecting([Worktree.folder(for: String(task.agentID.prefix(8)))])
+    }
+
     func deleteProject(_ project: Project) {
         if sidebar == .project(project.uuid) { sidebar = .list(.inbox) }
         context.delete(project)

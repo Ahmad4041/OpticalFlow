@@ -143,7 +143,7 @@ struct BoardCard: View {
                         .lineLimit(2)
                 }
                 if aiWorking {
-                    Label("AI working on it", systemImage: "sparkles")
+                    Label(task.agentBranch == nil ? "AI working on it" : "Agent working in a worktree", systemImage: "sparkles")
                         .font(.caption)
                         .foregroundStyle(.tint)
                         .symbolEffect(.pulse)
@@ -193,6 +193,9 @@ struct BoardCard: View {
                         PriorityFlag(priority: task.priority)
                             .labelStyle(.iconOnly)
                     }
+                    if task.agentBranch != nil, !aiWorking {
+                        Image(systemName: "arrow.triangle.branch").help("An agent's branch is waiting for review")
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -216,6 +219,7 @@ struct BoardCard: View {
             Button("Start Session") { model.startSession(on: task) }
             Button(task.recordsSession ? "Stop Recording Sessions" : "Record Sessions") { task.recordsSession.toggle(); model.save() }
             PriorityMenu(task: task)
+            HandoffButton(task: task)
             Divider()
             ForEach(BoardColumn.allCases.filter { $0 != task.boardColumn }, id: \.self) { column in
                 Button("Move to \(column.title)") { model.move([task.uuid.uuidString], toColumn: column) }

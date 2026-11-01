@@ -82,6 +82,10 @@ struct OpticalFlowApp: App {
                 Divider()
                 Button(model.recorder.isRecording ? "Stop Recording" : "Record Screen…") { model.toggleRecording() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
+                Button("Hand to Agent") { if let task = model.selectedTask { try? model.voice.handoff(task) } }
+                    .keyboardShortcut("h", modifiers: [.command, .option])
+                    .disabled(model.selectedTask?.project?.repoPath == nil)
+                Divider()
                 Button("Mark Chapter Here") { model.mark() }
                     .keyboardShortcut("m", modifiers: [.command, .shift])
                     .disabled(!model.recorder.isRecording)
