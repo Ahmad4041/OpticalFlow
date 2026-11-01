@@ -44,6 +44,11 @@ enum Hotkey {
 
     static var voiceTaken: Bool { taken.contains(3) }
 
+    /// Control-Option-Command-M: a chapter marker in the running recording.
+    static func registerMark(_ action: @escaping () -> Void) {
+        register(id: 4, keyCode: UInt32(kVK_ANSI_M), modifiers: UInt32(controlKey | optionKey | cmdKey), action: action)
+    }
+
     /// Control-Space: the quick-entry panel.
     static func registerQuickEntry(_ action: @escaping () -> Void) {
         register(id: 2, keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey), action: action)

@@ -92,6 +92,38 @@ func cleans(_ input: String, expected: String?) {
     #expect(DueDateParser.parse("Call 3 friends", now: now).due == nil)
     #expect(DueDateParser.parse("Sort 2 decks", now: now).due == nil)
     #expect(DueDateParser.parse("Release 2026-11-05", now: now).due == cal.date(from: DateComponents(year: 2026, month: 11, day: 5)))
+    // Deadlines and repeats
+    let byFri = DueDateParser.parse("Send the invoice by friday", now: now)
+    #expect(byFri == .init(title: "Send the invoice", due: nil, deadline: day(1)))
+    let planAndDeadline = DueDateParser.parse("Draft the talk tomorrow by the 5th of November", now: now)
+    #expect(planAndDeadline.title == "Draft the talk" && planAndDeadline.due == day(1) && planAndDeadline.deadline == cal.date(from: DateComponents(year: 2026, month: 11, day: 5)))
+    #expect(DueDateParser.parse("Sort the drawer by hand", now: now).due == nil)
+    let rent = DueDateParser.parse("Pay rent every month on the 1st", now: now)
+    #expect(rent.title == "Pay rent" && rent.repeatRule == .monthly && rent.due == cal.date(from: DateComponents(year: 2026, month: 11, day: 1)))
+    let standup = DueDateParser.parse("Standup weekdays at 9:30", now: now)
+    #expect(standup.title == "Standup" && standup.repeatRule == .weekdays && standup.due == at(0, 9, 30) || standup.due == at(1, 9, 30))
+    #expect(DueDateParser.parse("Water the plants daily", now: now) == .init(title: "Water the plants", due: day(0), repeatRule: .daily))
+}
+
+@Test func repeats() {
+    let cal = Calendar.current
+    let fri = cal.date(from: DateComponents(year: 2026, month: 10, day: 30, hour: 9))!   // a Friday
+    #expect(RepeatRule.parse("every month") == .monthly && RepeatRule.parse("weekdays") == .weekdays && RepeatRule.parse("soon") == nil)
+    #expect(RepeatRule.daily.next(after: fri, notBefore: fri) == cal.date(byAdding: .day, value: 1, to: fri))
+    #expect(RepeatRule.weekdays.next(after: fri, notBefore: fri) == cal.date(byAdding: .day, value: 3, to: fri))   // Monday
+    #expect(RepeatRule.monthly.next(after: fri, notBefore: fri) == cal.date(from: DateComponents(year: 2026, month: 11, day: 30, hour: 9)))
+    // Completed a month late: the next one is after today, not already overdue.
+    let late = cal.date(byAdding: .day, value: 45, to: fri)!
+    #expect(RepeatRule.weekly.next(after: fri, notBefore: late)! > late)
+    #expect(RepeatRule.none.next(after: fri) == nil)
+}
+
+@Test func chapterIssues() {
+    let two = [ChapterMark(title: "A", offset: 30)]
+    #expect(ChapterList.issues(opening: "Start", marks: two) == ["YouTube needs at least 3 chapters; this list has 2."])
+    let three = [ChapterMark(title: "A", offset: 30), ChapterMark(title: "B", offset: 60)]
+    #expect(ChapterList.issues(opening: "Start", marks: three, duration: 120).isEmpty)
+    #expect(ChapterList.issues(opening: "Start", marks: three, duration: 65) == ["The last chapter is shorter than 10 seconds."])
 }
 
 @Test func cameraLayoutFrames() {
@@ -179,6 +211,8 @@ func cleans(_ input: String, expected: String?) {
     ("note on chapter export saying use the youtube preset", .addNote(match: "chapter export", note: "use the youtube preset")),
     ("add a subtask to the login loop: write the regression test", .addSubtask(match: "the login loop", title: "write the regression test")),
     ("add a step under chapter export called upload the file", .addSubtask(match: "chapter export", title: "upload the file")),
+    ("mark that", .mark(title: nil)),
+    ("add a marker called the bug appears", .mark(title: "the bug appears")),
 ])
 func voiceIntents(_ text: String, expected: VoiceIntent) {
     #expect(VoiceIntent.parse(text) == expected)

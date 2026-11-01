@@ -58,6 +58,10 @@ final class TaskItem {
     /// What the AI agent last said about this task, and when. Optional: added after the first stores.
     var agentReply: String?
     var agentReplyAt: Date?
+    /// The hard date, separate from `due`, which is the day you plan to do it.
+    var deadline: Date?
+    /// RepeatRule.rawValue; completing a repeating task moves it forward instead of closing it.
+    var repeatRaw: String = "none"
     var createdAt: Date = Date.now
     var uuid: UUID = UUID()
     var project: Project?
@@ -69,6 +73,10 @@ final class TaskItem {
     }
 
     var isDone: Bool { completedAt != nil }
+    var repeatRule: RepeatRule {
+        get { RepeatRule(rawValue: repeatRaw) ?? .none }
+        set { repeatRaw = newValue.rawValue }
+    }
     var subtasks: [ChecklistItem] {
         get { checklist ?? [] }
         set { checklist = newValue }
@@ -81,7 +89,7 @@ final class TaskItem {
 
     /// `asOpen` evaluates the list rule as if the task were not done (a just-completed row that still shows).
     func isIn(_ list: SmartList, asOpen: Bool = false) -> Bool {
-        list.contains(hasProject: project != nil, due: due, someday: isSomeday, done: asOpen ? false : isDone)
+        list.contains(hasProject: project != nil, due: due, someday: isSomeday, done: asOpen ? false : isDone, deadline: deadline)
     }
 }
 

@@ -30,6 +30,7 @@ struct OpticalFlowApp: App {
                     Hotkey.registerSession { model.toggleSession() }
                     Hotkey.registerQuickEntry { model.quickEntry.toggle() }
                     Hotkey.registerVoice { model.voice.toggle() }
+                    Hotkey.registerMark { model.mark() }
                     if ControlStrip.enabled, !Store.isOverridden { ControlStrip.shared.install(model: model) }
                 }
         }
@@ -81,6 +82,9 @@ struct OpticalFlowApp: App {
                 Divider()
                 Button(model.recorder.isRecording ? "Stop Recording" : "Record Screen…") { model.toggleRecording() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
+                Button("Mark Chapter Here") { model.mark() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                    .disabled(!model.recorder.isRecording)
             }
             CommandGroup(after: .windowArrangement) {
                 Button(model.miniTimer.isShown ? "Hide Mini Timer" : "Show Mini Timer") { model.miniTimer.toggle() }

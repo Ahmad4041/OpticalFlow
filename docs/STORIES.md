@@ -394,6 +394,26 @@ Acceptance:
 UX: Toolbar sparkles open the list of jobs with steps, answers, Open and Stop. `opticalflow agent jobs` lists them.
 Status: done
 
+### S-048 Chapters that YouTube accepts, and "mark that" while recording
+As the user, I press Control-Option-Command-M, say "mark that", or click Mark in the mini timer during a recording, and a chapter lands at that moment; the recording detail tells me in plain words when YouTube would ignore the list.
+Screens: recordings, minitimer
+Depends: S-008
+Acceptance:
+- [unit] issues(): fewer than 3 chapters, last chapter under 10 s.
+- [self] mark() without a recording says so; the voice intent "mark that" maps.
+UX: Task > Mark Chapter Here (Shift-Command-M in the app, Control-Option-Command-M anywhere); `opticalflow record mark --title`.
+Status: done
+
+### S-049 Deadline separate from the plan, and repeats
+As the user, "send the invoice by friday" sets a deadline while the day I plan to do it stays free, and "pay rent every month on the 1st" comes back on the next 1st when I complete it.
+Screens: today, board
+Depends: S-044
+Acceptance:
+- [unit] "by friday", "deadline 5 nov" parse as deadline; "by hand" does not; "every month", "weekdays", "daily" parse as repeat rules; next() skips weekends and never lands before today.
+- [self] a deadline alone shows in Upcoming and in Today when reached; completing a repeat moves due and deadline forward, clears subtasks, keeps the task open.
+UX: Deadline switch and Repeat picker in the detail; checkered flag on rows and cards, red when missed; repeat icon on the date. CLI --deadline and --repeat.
+Status: done
+
 ### S-042 Hand a task to a sandboxed agent
 As the user, I hand a task with its notes to an agent that works on it in a sandbox for the long run, and see its progress and result on the card.
 Screens: board

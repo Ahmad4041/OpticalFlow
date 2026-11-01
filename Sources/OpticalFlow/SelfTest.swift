@@ -297,6 +297,22 @@ enum SelfTest {
         check("S-047 finished jobs clear", { model.voice.clearFinishedJobs(); return model.voice.jobs.isEmpty }())
         model.delete(aiTask)
 
+        // S-048: chapter markers while recording.
+        check("S-048 a mark without a recording says so", model.mark() == nil && model.perform(.mark(title: nil)).hasPrefix("No recording"))
+        check("S-048 chapter issues are plain words", ChapterList.issues(opening: "Start", marks: []).first?.contains("at least 3") == true)
+
+        // S-049: deadline separate from the plan, and repeats.
+        guard let invoice = model.addTask(title: "Send the invoice by friday", on: .list(.inbox)) else { return check("S-049 add", false) }
+        check("S-049 'by friday' is a deadline, not a plan", invoice.title == "Send the invoice" && invoice.deadline != nil && invoice.due == nil)
+        check("S-049 a deadline alone lists in Upcoming", model.tasks(for: .list(.upcoming)).contains(invoice))
+        guard let rent = model.addTask(title: "Pay rent every month on the 1st", on: .list(.inbox)) else { return check("S-049 add rent", false) }
+        check("S-049 'every month on the 1st' repeats monthly", rent.repeatRule == .monthly && rent.due != nil, rent.repeatRaw)
+        let firstDue = rent.due!
+        model.complete(rent)
+        check("S-049 completing a repeat moves it forward and keeps it open", !rent.isDone && rent.due! > firstDue, "\(String(describing: rent.due))")
+        model.delete(invoice)
+        model.delete(rent)
+
         // S-043: subtasks.
         guard let steps = model.addTask(title: "Ship the release", on: .list(.inbox)) else { return check("S-043 add", false) }
         steps.subtasks = Checklist.parse("Tag it; Build; Upload")

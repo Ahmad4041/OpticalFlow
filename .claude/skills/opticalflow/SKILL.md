@@ -25,6 +25,8 @@ If the app is closed, the command opens it in the background.
 | `opticalflow tasks add --title T [--project P] [--due tomorrow] [--priority high] [--record] --json` | Add one |
 | `opticalflow tasks update <id> [--priority high] [--notes "…"] [--due fri] --json` | Change one; urgent means `--priority high` |
 | `opticalflow agent say "make the login loop urgent" --json` | Send a sentence to the voice agent |
+| `opticalflow tasks add --title "Send the invoice" --deadline fri --repeat monthly --json` | A hard date apart from the plan; a repeat rule |
+| `opticalflow record mark --title "The bug appears" --json` | A chapter marker in the running recording |
 | `opticalflow tasks move <id> --to doing` | Board column or page: backlog, todo, doing, done, inbox, today, someday, a project |
 | `opticalflow session start --task <id> --json` | Start a focus session (and the recorder when the task records) |
 | `opticalflow projects board <name> --json` | A project's board, tasks per column |

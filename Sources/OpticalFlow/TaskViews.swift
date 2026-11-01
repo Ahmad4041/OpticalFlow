@@ -137,6 +137,19 @@ struct TaskRow: View {
                     .font(.callout)
                     .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
             }
+            if let deadline = task.deadline {
+                let missed = !task.isDone && deadline < Calendar.current.startOfDay(for: .now)
+                Label(deadline.formatted(.dateTime.month(.abbreviated).day()), systemImage: "flag.checkered")
+                    .font(.callout)
+                    .foregroundStyle(missed ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .help("Deadline \(deadline.formatted(date: .long, time: .omitted))")
+            }
+            if task.repeatRule != .none {
+                Image(systemName: "repeat")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help(task.repeatRule.title)
+            }
             if task.recordsSession {
                 Image(systemName: "record.circle")
                     .font(.caption)
@@ -191,6 +204,13 @@ struct TaskDetail: View {
                 DatePicker("Due", selection: Binding(get: { task.due ?? .now }, set: { task.due = $0 }),
                            displayedComponents: task.hasDueTime ? [.date, .hourAndMinute] : [.date])
                 Toggle("Time", isOn: $task.hasDueTime)
+            }
+            Toggle("Deadline", isOn: Binding(get: { task.deadline != nil }, set: { task.deadline = $0 ? (task.due ?? .now) : nil }))
+            if task.deadline != nil {
+                DatePicker("Deadline", selection: Binding(get: { task.deadline ?? .now }, set: { task.deadline = $0 }), displayedComponents: [.date])
+            }
+            Picker("Repeat", selection: $task.repeatRule) {
+                ForEach(RepeatRule.allCases, id: \.self) { Text($0.title).tag($0) }
             }
             Toggle("Someday", isOn: $task.isSomeday)
             Picker("Priority", selection: $task.priority) {

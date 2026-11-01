@@ -76,8 +76,13 @@ struct RecordingDetail: View {
                 Text(recording.chapterText)
                     .monospacedDigit()
                     .textSelection(.enabled)
+                ForEach(ChapterList.issues(opening: recording.title, marks: recording.chapters, duration: recording.duration), id: \.self) { issue in
+                    Label(issue, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                        .font(.callout)
+                }
                 Button("Copy Chapters", systemImage: "doc.on.doc") { recording.copyChapters() }
-                    .help("Copy the chapter list for a YouTube description")
+                    .help("Copy the chapter list for a YouTube description. Complete tasks or press Control-Option-Command-M while recording to add chapters.")
             }
             Section("Preview") {
                 if let player {

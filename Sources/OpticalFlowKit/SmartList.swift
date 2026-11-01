@@ -22,20 +22,25 @@ public enum SmartList: String, CaseIterable, Sendable {
         }
     }
 
-    /// Done tasks never match. Inbox = no project and not someday. Today = due today or overdue.
-    /// Upcoming = due after today. Someday = the someday flag.
-    public func contains(hasProject: Bool, due: Date?, someday: Bool, done: Bool,
+    /// Done tasks never match. Inbox = no project and not someday. Today = planned for today or overdue,
+    /// or a deadline today or passed. Upcoming = planned or due after today. Someday = the someday flag.
+    public func contains(hasProject: Bool, due: Date?, someday: Bool, done: Bool, deadline: Date? = nil,
                          now: Date = .now, calendar: Calendar = .current) -> Bool {
         if done { return false }
+        let day = calendar.startOfDay(for: now)
         switch self {
         case .inbox: return !hasProject && !someday
         case .someday: return someday
         case .today:
-            guard let due else { return false }
-            return calendar.startOfDay(for: due) <= calendar.startOfDay(for: now)
+            let planned = due.map { calendar.startOfDay(for: $0) <= day } ?? false
+            let hard = deadline.map { calendar.startOfDay(for: $0) <= day } ?? false
+            return planned || hard
         case .upcoming:
-            guard let due else { return false }
-            return calendar.startOfDay(for: due) > calendar.startOfDay(for: now)
+            let planned = due.map { calendar.startOfDay(for: $0) > day }
+            let hard = deadline.map { calendar.startOfDay(for: $0) > day }
+            // Planned today is Today, not Upcoming, even with a later deadline.
+            if planned == false { return false }
+            return planned ?? hard ?? false
         }
     }
 }

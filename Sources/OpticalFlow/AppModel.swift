@@ -155,6 +155,8 @@ final class AppModel {
         let task = TaskItem(title: parsed.title)
         task.due = parsed.due
         task.hasDueTime = parsed.hasTime
+        task.deadline = parsed.deadline
+        task.repeatRule = parsed.repeatRule
         switch page ?? sidebar ?? .list(.inbox) {
         case .list(.today): task.due = task.due ?? .now
         case .list(.upcoming): task.due = task.due ?? Calendar.current.date(byAdding: .day, value: 1, to: .now)
@@ -204,12 +206,21 @@ final class AppModel {
 
     func complete(_ task: TaskItem) {
         guard !task.isDone else { return }
-        task.completedAt = .now
-        task.isDoing = false
-        undoCompleted.append(task)
         if let recording = recorder.recording {
             recording.chapters.append(ChapterMark(title: task.title, offset: Date.now.timeIntervalSince(recording.startedAt)))
         }
+        // A repeating task comes back on its next day instead of closing.
+        if task.repeatRule != .none, let next = task.repeatRule.next(after: task.due ?? .now) {
+            if let deadline = task.deadline { task.deadline = task.repeatRule.next(after: deadline) }
+            task.due = next
+            task.isDoing = false
+            for index in task.subtasks.indices { task.subtasks[index].isDone = false }
+            save()
+            return
+        }
+        task.completedAt = .now
+        task.isDoing = false
+        undoCompleted.append(task)
         save()
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(2))
@@ -320,6 +331,17 @@ final class AppModel {
         return (title, nil)
     }
 
+    /// A chapter marker in the running recording, "mark that" while streaming. Returns the mark.
+    @discardableResult
+    func mark(_ title: String? = nil) -> ChapterMark? {
+        guard let recording = recorder.recording else { return nil }
+        let offset = Date.now.timeIntervalSince(recording.startedAt)
+        let mark = ChapterMark(title: title ?? "Marker \(recording.chapters.count + 1)", offset: offset)
+        recording.chapters.append(mark)
+        save()
+        return mark
+    }
+
     /// Runs one built-in voice intent and returns what to say back.
     func perform(_ intent: VoiceIntent) -> String {
         func found(_ match: String) -> TaskItem? {
@@ -345,6 +367,9 @@ final class AppModel {
             guard session != nil else { return "No session is running." }
             stopSession()
             return "Session stopped."
+        case .mark(let title):
+            guard let mark = mark(title) else { return "No recording is running." }
+            return "Marked “\(mark.title)” at \(Countdown.clock(Int(mark.offset), padded: false))."
         case .setPriority(let match, let priority):
             guard let task = found(match) else { return "No open task matches “\(match)”." }
             task.priority = priority

@@ -168,9 +168,16 @@ struct BoardCard: View {
                 }
                 HStack(spacing: Space.sm) {
                     if let due = task.due {
-                        Label(DayGroup.label(for: due) + (task.hasDueTime ? ", " + due.formatted(.dateTime.hour().minute()) : ""), systemImage: "calendar")
+                        Label(DayGroup.label(for: due) + (task.hasDueTime ? ", " + due.formatted(.dateTime.hour().minute()) : ""), systemImage: task.repeatRule == .none ? "calendar" : "repeat")
                             .foregroundStyle(overdue ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                             .lineLimit(1)
+                    }
+                    if let deadline = task.deadline {
+                        let missed = !task.isDone && deadline < Calendar.current.startOfDay(for: .now)
+                        Label(deadline.formatted(.dateTime.month(.abbreviated).day()), systemImage: "flag.checkered")
+                            .foregroundStyle(missed ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                            .lineLimit(1)
+                            .help("Deadline")
                     }
                     Spacer(minLength: 0)
                     if model.session?.task == task {

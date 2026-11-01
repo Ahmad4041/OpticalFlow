@@ -43,6 +43,9 @@ enum SeedData {
         login.priority = .high
         login.agentReply = "Moved to Doing and set to high priority. The repro note is attached."
         login.agentReplyAt = .now.addingTimeInterval(-600)
+        login.deadline = day(3)
+        let rent = task("Pay the studio rent", project: stream, due: day(1), age: 6)
+        rent.repeatRule = .monthly
         login.subtasks = [ChecklistItem(title: "Reproduce with a fresh profile", isDone: true),
                            ChecklistItem(title: "Write the regression test"),
                            ChecklistItem(title: "Fix the redirect")]

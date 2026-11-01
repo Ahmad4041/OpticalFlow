@@ -39,6 +39,18 @@ public enum ChapterList {
 }
 
 extension ChapterList {
+    /// Why YouTube would ignore this list, in plain words. Empty when it passes:
+    /// first line at 0:00 (always true here), at least three chapters, each 10 s or more apart.
+    public static func issues(opening: String, marks: [ChapterMark], duration: TimeInterval? = nil) -> [String] {
+        let kept = lines(opening: opening, marks: marks)
+        var issues: [String] = []
+        if kept.count < 3 { issues.append("YouTube needs at least 3 chapters; this list has \(kept.count).") }
+        if let duration, let last = kept.last, kept.count > 1, duration - last.offset < minimumGap {
+            issues.append("The last chapter is shorter than 10 seconds.")
+        }
+        return issues
+    }
+
     /// Chapters that survive a trim to [start, end): offsets move back by `start`.
     public static func trimmed(_ marks: [ChapterMark], start: TimeInterval, end: TimeInterval) -> [ChapterMark] {
         marks.filter { $0.offset >= start && $0.offset < end }

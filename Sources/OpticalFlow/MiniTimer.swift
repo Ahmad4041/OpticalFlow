@@ -83,6 +83,8 @@ struct MiniTimerView: View {
                 Spacer(minLength: 0)
                 HStack(spacing: Space.xs) {
                     if model.recorder.isRecording {
+                        Button("Mark Chapter", systemImage: "bookmark.fill") { model.mark() }
+                            .help("Mark a chapter here (Control-Option-Command-M)")
                         Button("Stop Recording", systemImage: "stop.circle.fill") { model.toggleRecording() }
                             .tint(.red)
                             .help("Stop recording")

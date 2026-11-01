@@ -7,14 +7,20 @@ import Foundation
 public enum DueDateParser {
     public struct Result: Equatable, Sendable {
         public var title: String
+        /// The day to do it ("on friday", "tomorrow").
         public var due: Date?
         /// True when a clock time was given, so views show it.
         public var hasTime: Bool = false
+        /// The hard date ("by friday", "deadline 5 nov"). Separate from the plan.
+        public var deadline: Date?
+        public var repeatRule: RepeatRule = .none
 
-        public init(title: String, due: Date?, hasTime: Bool = false) {
+        public init(title: String, due: Date?, hasTime: Bool = false, deadline: Date? = nil, repeatRule: RepeatRule = .none) {
             self.title = title
             self.due = due
             self.hasTime = hasTime
+            self.deadline = deadline
+            self.repeatRule = repeatRule
         }
     }
 
@@ -24,7 +30,19 @@ public enum DueDateParser {
         let today = calendar.startOfDay(for: now)
 
         var dayOffset: Date?
+        var deadline: Date?
         var time: (hour: Int, minute: Int)?
+        var repeatRule = RepeatRule.none
+        // A repeat rule first: "every month", "weekdays", "daily".
+        if let (range, rule) = find(in: words, longest: 3, { phrase, _ in repeatWords(phrase) }) {
+            words.removeSubrange(range)
+            repeatRule = rule
+        }
+        // Then a deadline: "by friday", "deadline 5 nov", "due by the 1st".
+        if let (range, date) = find(in: words, longest: 6, { phrase, atEnd in deadlineWords(phrase, atEnd: atEnd, today: today, calendar: calendar) }) {
+            words.removeSubrange(range)
+            deadline = date
+        }
         // Up to two phrases: a date and a time, in either order, each the longest match in the sentence.
         for _ in 0..<2 {
             if dayOffset == nil, let (range, date) = find(in: words, longest: 5, { dateWords($0, atEnd: $1, today: today, calendar: calendar) }) {
@@ -44,19 +62,23 @@ public enum DueDateParser {
             }
             break
         }
-        guard dayOffset != nil || time != nil else { return Result(title: text, due: nil) }
+        guard dayOffset != nil || time != nil || deadline != nil || repeatRule != .none else { return Result(title: text, due: nil) }
         // A dangling connective at the join or the end: "call the bank on", "meet at".
         while let last = words.last, fillers.contains(last.lowercased()) { words.removeLast() }
         let title = words.joined(separator: " ")
         guard !title.isEmpty else { return Result(title: text, due: nil) }
 
-        var due = dayOffset ?? today
+        var due: Date? = dayOffset
         if let time {
-            due = calendar.date(bySettingHour: time.hour, minute: time.minute, second: 0, of: due) ?? due
+            var at = dayOffset ?? today
+            at = calendar.date(bySettingHour: time.hour, minute: time.minute, second: 0, of: at) ?? at
             // A bare time that already passed today means tomorrow.
-            if dayOffset == nil, due <= now { due = calendar.date(byAdding: .day, value: 1, to: due) ?? due }
+            if dayOffset == nil, at <= now { at = calendar.date(byAdding: .day, value: 1, to: at) ?? at }
+            due = at
         }
-        return Result(title: title, due: due, hasTime: time != nil)
+        // A repeat with no day starts today, so the next one has something to count from.
+        if due == nil, repeatRule != .none { due = deadline ?? today }
+        return Result(title: title, due: due, hasTime: time != nil, deadline: deadline, repeatRule: repeatRule)
     }
 
     // MARK: Matching
@@ -99,7 +121,7 @@ public enum DueDateParser {
         var words = input
         // Leading connectives belong to the phrase so they leave the title too: "on friday", "by the 5th".
         var hadPrefix = false
-        while let first = words.first, ["on", "by", "due", "for", "the"].contains(first), words.count > 1 {
+        while let first = words.first, ["on", "for", "the"].contains(first), words.count > 1 {
             words.removeFirst()
             hadPrefix = true
         }
@@ -143,6 +165,24 @@ public enum DueDateParser {
             let bits = words[0].split(separator: "-").compactMap { Int($0) }
             if bits.count == 3 { parts.year = bits[0]; parts.month = bits[1]; parts.day = bits[2]; return calendar.date(from: parts) }
         }
+        return nil
+    }
+
+    /// "by friday", "by the 5th of november", "deadline 5 nov", "due by tomorrow": the hard date.
+    private static func deadlineWords(_ words: [String], atEnd: Bool, today: Date, calendar: Calendar) -> Date? {
+        var rest = words
+        if rest.first == "due", rest.count > 1 { rest.removeFirst() }
+        guard let lead = rest.first, ["by", "deadline", "before"].contains(lead), rest.count > 1 else { return nil }
+        rest.removeFirst()
+        // "by" alone must not swallow a plan like "by hand": the rest has to be a date.
+        return dateWords(rest, atEnd: atEnd, today: today, calendar: calendar)
+    }
+
+    /// "every month", "every 2 weeks" is not supported, "weekdays", "daily".
+    private static func repeatWords(_ words: [String]) -> RepeatRule? {
+        let joined = words.joined(separator: " ")
+        if let rule = RepeatRule.parse(joined), rule != .none { return rule }
+        // "every monday" → weekly; the weekday itself is left for the date pass.
         return nil
     }
 

@@ -10,6 +10,8 @@ public enum VoiceIntent: Equatable, Sendable {
     case setPriority(match: String, Priority)
     case addNote(match: String, note: String)
     case addSubtask(match: String, title: String)
+    /// A chapter marker in the running recording.
+    case mark(title: String?)
 
     private static let priorityWords = "urgent|high priority|high|medium priority|medium|normal|low priority|low|asap|critical"
 
@@ -20,6 +22,8 @@ public enum VoiceIntent: Equatable, Sendable {
 
     private static let rules: [Rule] = [
         rule(#"^(?:stop|end|finish)(?: the)?(?: current)? session$"#) { _ in .stop },
+        rule(#"^(?:mark|clip) (?:that|this|it|here)$"#) { _ in .mark(title: nil) },
+        rule(#"^(?:add )?(?:a )?(?:marker|chapter|bookmark)(?: here| now)?(?: called| named|:)? ?(.*)$"#) { .mark(title: $0.first.flatMap { $0.isEmpty ? nil : $0 }) },
         rule(#"^(?:add|create) (?:a |the )?(?:subtask|sub task|sub-task|step|checklist item) (?:to|on|for|under) (.+?)(?::| called| saying),? (.+)$"#) { .addSubtask(match: $0[0], title: $0[1]) },
         rule(#"^(?:add|create|make) (?:a |the )?note (?:to|on|for) (.+?)(?::| saying| that),? (.+)$"#) { .addNote(match: $0[0], note: $0[1]) },
         rule(#"^note (?:to|on|for) (.+?)(?::| saying| that),? (.+)$"#) { .addNote(match: $0[0], note: $0[1]) },

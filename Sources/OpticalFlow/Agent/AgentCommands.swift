@@ -61,7 +61,9 @@ enum AgentCommands {
                      params: [.init(name: "title", required: true, help: "the title; may end with a date like \"tomorrow\" or \"fri\""),
                               .init(name: "notes", help: "notes under the title"),
                               .init(name: "project", help: "a project id or name"),
-                              .init(name: "due", help: "today, tomorrow at 3pm, fri, in 3 days, 5 nov, or 2026-11-05"),
+                              .init(name: "due", help: "the day to do it: today, tomorrow at 3pm, fri, in 3 days, 5 nov, or 2026-11-05"),
+                              .init(name: "deadline", help: "the hard date, same words, or \"none\""),
+                              .init(name: "repeat", help: "daily, weekdays, weekly, monthly, yearly, or none"),
                               .init(name: "someday", kind: .boolean, help: "park it in Someday"),
                               .init(name: "priority", help: "none, low, medium, or high (urgent)"),
                               .init(name: "subtasks", help: "steps separated by ; (\"write test; run it\")"),
@@ -77,7 +79,9 @@ enum AgentCommands {
                               .init(name: "title", help: "new title"),
                               .init(name: "notes", help: "new notes"),
                               .init(name: "project", help: "a project id or name, or \"none\""),
-                              .init(name: "due", help: "a date, or \"none\" to clear it"),
+                              .init(name: "due", help: "the day to do it, or \"none\" to clear it"),
+                              .init(name: "deadline", help: "the hard date, or \"none\""),
+                              .init(name: "repeat", help: "daily, weekdays, weekly, monthly, yearly, or none"),
                               .init(name: "someday", kind: .boolean, help: "true or false"),
                               .init(name: "doing", kind: .boolean, help: "on the board's Doing column"),
                               .init(name: "priority", help: "none, low, medium, or high (urgent)"),
@@ -202,6 +206,12 @@ enum AgentCommands {
             guard !model.recorder.isRecording else { throw AgentError.invalid("a recording is already running") }
             model.recorder.pick()
             return ["pickerShown": true, "hint": "the recording starts when the person picks a display or window"]
+        },
+        AgentCommand(name: "record mark", summary: "Add a chapter marker at this moment of the running recording.",
+                     params: [.init(name: "title", help: "the chapter title; default \"Marker N\"")],
+                     example: "opticalflow record mark --title \"The bug appears\" --json") { args, model in
+            guard let mark = model.mark(args.string("title")) else { throw AgentError.unavailable("no recording is running") }
+            return ["title": mark.title, "offset": Int(mark.offset), "clock": Countdown.clock(Int(mark.offset), padded: false)]
         },
         AgentCommand(name: "record stop", summary: "Stop the running screen recording.",
                      example: "opticalflow record stop --json") { _, model in
@@ -347,6 +357,11 @@ enum AgentCommands {
         if let someday = try args.bool("someday") { task.isSomeday = someday }
         if let doing = try args.bool("doing") { task.isDoing = doing }
         if let record = try args.bool("record") { task.recordsSession = record }
+        if let text = args.string("deadline") { task.deadline = text == "none" ? nil : try parseDue(text).date }
+        if let text = args.string("repeat") {
+            guard let rule = RepeatRule.parse(text) else { throw AgentError.usage("--repeat takes daily, weekdays, weekly, monthly, yearly, or none") }
+            task.repeatRule = rule
+        }
         if let text = args.string("subtasks") { task.subtasks += Checklist.parse(text) }
         for (key, done) in [("check", true), ("uncheck", false)] {
             guard let text = args.string(key) else { continue }
@@ -398,6 +413,8 @@ extension TaskItem: AgentIdentified {
                                 "subtasks": subtasks.map { ["title": $0.title, "done": $0.isDone] as JSONObject }, "hasDueTime": hasDueTime,
                                 "createdAt": JSON.date(createdAt)]
         if let due { json["due"] = JSON.date(due) }
+        if let deadline { json["deadline"] = JSON.date(deadline) }
+        if repeatRule != .none { json["repeat"] = repeatRule.rawValue }
         if let project { json["project"] = project.name; json["projectId"] = String(project.agentID.prefix(8)) }
         if let completedAt { json["completedAt"] = JSON.date(completedAt) }
         return json
