@@ -95,6 +95,40 @@ enum Snapshot {
                 model.voice.busy = false
                 model.voice.close()
             }
+            if only == nil || only?.contains("agentjobs") == true {
+                // The toolbar sparkles popover: one job running, one finished, one hand-off.
+                let voice = model.voice
+                let login = model.tasks(for: .list(.today)).first.map { String($0.agentID.prefix(8)) }
+                let running = AgentJob(request: "Make the login loop urgent and add a note: repro needs a fresh profile", orchestrator: .claude, contextTaskID: login)
+                running.steps = ["tasks list --search login", "tasks update \(login ?? "0bc72e97") --priority high"]
+                let done = AgentJob(request: "Plan the chapter export for Friday", orchestrator: .claude, contextTaskID: nil)
+                done.steps = ["tasks add --title \"Write the chapter export\" --due fri"]
+                done.reply = "Added “Write the chapter export” for Friday in OpticalFlow."
+                done.finishedAt = .now
+                let handoff = AgentJob(request: "Work on “Try the new ScreenCaptureKit picker API”", orchestrator: .claude, contextTaskID: nil)
+                handoff.repo = "/Users/you/Code/OpticalFlow"
+                handoff.steps = ["Read Sources/OpticalFlow/Recorder.swift", "Edit Recorder.swift", "Bash(swift build)", "Bash(git commit -m …)"]
+                handoff.reply = "1 commit on opticalflow/3f9a2c1e, 1 file changed, 24 insertions(+), 6 deletions(-), $0.04."
+                handoff.costUSD = 0.04
+                handoff.finishedAt = .now
+                voice.jobs = [handoff, done, running]
+                let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 8), styleMask: [.titled, .fullSizeContentView], backing: .buffered, defer: false)
+                panel.titleVisibility = .hidden
+                panel.titlebarAppearsTransparent = true
+                let host = NSHostingView(rootView: AgentJobsList().environment(model).frame(width: 360))
+                panel.contentView = host
+                panel.setContentSize(host.fittingSize)
+                panel.center()
+                panel.orderFront(nil)
+                try? await Task.sleep(for: .seconds(0.6))
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.4))
+                    capture(to: "\(dir)/agentjobs-\(mode).png", window: panel)
+                }
+                panel.close()
+                voice.jobs = []
+            }
             if only == nil || only?.contains("minitimer") == true {
                 model.selection = model.firstID(for: .list(.today))
                 model.startSession()

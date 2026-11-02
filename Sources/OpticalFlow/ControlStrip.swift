@@ -86,7 +86,16 @@ final class ControlStrip: NSObject, NSTouchBarDelegate {
         let recording = model.recorder.isRecording
         button.image = Self.glyph
         button.contentTintColor = recording ? .systemRed : nil
-        button.title = model.clockLabel.map { " " + $0 } ?? (model.breakUntil != nil ? " " + Countdown.clock(model.breakRemaining) : "")
+        // The collapsed strip gives an item room for the glyph or about three characters, not both.
+        // Idle: the glyph. Running: the minutes left as text, "24m" or "+3m", red while recording.
+        if let remaining = model.remaining {
+            button.title = remaining >= 0 ? "\(remaining / 60)m" : "+\(-remaining / 60)m"
+        } else if model.breakUntil != nil {
+            button.title = "\(model.breakRemaining / 60)m"
+        } else {
+            button.title = ""
+        }
+        button.imagePosition = button.title.isEmpty ? .imageOnly : .noImage
         label?.stringValue = status
     }
 

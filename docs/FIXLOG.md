@@ -93,3 +93,9 @@ Symptom: `tools/selftest.sh` reported 1 of 136 checks failing on one Mac and pas
 Cause: the self-test and snapshots read and wrote `UserDefaults.standard`, the same preferences the person uses in the real app. Their camera was off, so the test saw it off; test runs also leaked their own writes (microphone, orchestrator) into real preferences.
 Fix: `Prefs.store` in App.swift. With `APP_STORE` set it is a separate suite, emptied at launch; otherwise it is `.standard`. Every preference read and write in the app goes through it, including `@AppStorage(…, store:)`.
 Rule: a test run touches nothing the user owns: not the store, not the preferences, not the installed app.
+
+## 2026-11-02 Control Strip item showed "25" instead of the countdown
+Symptom: with another app in front, the Touch Bar's Control Strip item read "25" or "24", the rest clipped.
+Cause: a collapsed Control Strip item is about 50 pt wide, fixed by the system. The glyph plus " 24:58" never fit; neither did the glyph plus "24m".
+Fix: the item is the glyph when idle and three characters of text when a session or break runs ("24m", "+3m"), red while recording. Verified with `screencapture -b` from Finder.
+Rule: a Control Strip item gets one glyph or three characters. Put anything longer in the modal bar behind the tap.

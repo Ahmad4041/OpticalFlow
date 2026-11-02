@@ -493,7 +493,7 @@ final class AppModel {
         if let session {
             return Countdown.label(planned: session.plannedMinutes * 60, elapsed: elapsed, paused: paused, recording: recorder.isRecording)
         }
-        if let breakUntil {
+        if breakUntil != nil {
             return "☕ " + Countdown.clock(breakRemaining)
         }
         return nil

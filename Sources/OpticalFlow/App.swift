@@ -31,7 +31,7 @@ struct OpticalFlowApp: App {
                     Hotkey.registerQuickEntry { model.quickEntry.toggle() }
                     Hotkey.registerVoice { model.voice.toggle() }
                     Hotkey.registerMark { model.mark() }
-                    if ControlStrip.enabled, !Store.isOverridden { ControlStrip.shared.install(model: model) }
+                    if ControlStrip.enabled, !Store.isOverridden || ProcessInfo.processInfo.environment["APP_STRIP"] == "1" { ControlStrip.shared.install(model: model) }
                 }
         }
         .modelContainer(model.container)
