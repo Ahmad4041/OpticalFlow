@@ -68,7 +68,7 @@ Everything lives on your Mac. No account, no server, no telemetry. Screenshots f
 
 ## Install
 
-**Download:** grab `OpticalFlow-x.y.z.zip` from the [latest release](https://github.com/Ahmad4041/OpticalFlow/releases/latest), unzip, and move the app to Applications. The build is not notarized yet, so the first launch needs right-click, Open, or:
+**Download:** open the `.dmg` from the [latest release](https://github.com/Ahmad4041/OpticalFlow/releases/latest) and drag OpticalFlow to Applications (a `.zip` is there too). The build is not notarized yet, so the first launch needs right-click, Open, or:
 
 ```sh
 xattr -d com.apple.quarantine /Applications/OpticalFlow.app
