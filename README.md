@@ -42,11 +42,11 @@ Native SwiftUI, one local database, no account, no server, no telemetry. The AI 
 <td align="center"><b>Sessions</b>: planned, worked, overflow</td>
 </tr>
 <tr>
-<td width="50%" align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/voice-dark.png"><img src="docs/screenshots/voice-light.png" alt="The voice panel showing the agent's steps" width="420"></picture></td>
+<td width="50%" align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/voice-dark.gif"><img src="docs/screenshots/voice-light.gif" alt="The voice panel: listening, then Claude Code's steps, then the answer" width="420"></picture></td>
 <td width="50%" align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/minitimer-dark.png"><img src="docs/screenshots/minitimer-light.png" alt="The floating mini timer" width="280"></picture></td>
 </tr>
 <tr>
-<td align="center"><b>Voice</b>: one sentence becomes tasks, dates and priorities</td>
+<td align="center"><b>Voice</b>: listen, run, answer, in one panel</td>
 <td align="center"><b>Mini timer</b>: floats over everything</td>
 </tr>
 </table>
