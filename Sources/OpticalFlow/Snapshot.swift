@@ -10,7 +10,11 @@ import SwiftUI
 /// APP_SNAPSHOT_PAGES=inbox,today limits the pages. Add "settings" to include Settings.
 /// Add APP_ACCENT=<id> to see the pages in another accent.
 enum Snapshot {
+    /// nil while snapshots run, so a capture never lands mid-transition. `.default` otherwise.
+    static let animation: Animation? = ProcessInfo.processInfo.environment["APP_SNAPSHOT"] == nil ? .default : nil
+
     static func runIfRequested(model: AppModel, openSettings: OpenSettingsAction) {
+        setlinebuf(stdout)   // the log is a file, not a terminal: show each capture as it happens
         let env = ProcessInfo.processInfo.environment
         guard let dir = env["APP_SNAPSHOT"], !dir.isEmpty else { return }
         // Snapshots never run against the real database.
@@ -87,12 +91,36 @@ enum Snapshot {
                 model.voice.steps = ["tasks list --search login", "tasks update 0bc72e97 --priority high"]
                 try? await Task.sleep(for: .seconds(0.8))
                 let panel = NSApp.windows.first { $0.frameAutosaveName == "VoicePanel" }
+                panel?.makeFirstResponder(nil)
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     try? await Task.sleep(for: .seconds(0.4))
                     capture(to: "\(dir)/voice-\(mode).png", window: panel)
                 }
+                // One request from start to finish, a frame per state, for the animated picture in the README.
+                let request = "Make the login loop urgent and add a note: repro needs a fresh profile"
+                let frames: [(VoiceAgent) -> Void] = [
+                    { $0.listening = true; $0.busy = false; $0.transcript = ""; $0.steps = []; $0.reply = "" },
+                    { $0.transcript = "Make the login loop urgent" },
+                    { $0.listening = false; $0.transcript = request; $0.busy = true; $0.startedAt = .now },
+                    { $0.steps = ["tasks list --search login"]; $0.startedAt = .now.addingTimeInterval(-2) },
+                    { $0.steps.append("tasks update 0bc72e97 --priority high"); $0.startedAt = .now.addingTimeInterval(-4) },
+                    { $0.steps.append("tasks update 0bc72e97 --notes \"Repro needs a fresh profile\""); $0.startedAt = .now.addingTimeInterval(-6) },
+                    { $0.busy = false; $0.handledLocally = false; $0.reply = "Set “Fix the login redirect loop” to high priority and added the note. It is in Doing, due today." },
+                ]
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    for (index, frame) in frames.enumerated() {
+                        frame(model.voice)
+                        panel?.makeFirstResponder(nil)
+                        // The steps list fades and the panel resizes; the first and last frames change the most.
+                        try? await Task.sleep(for: .seconds(index == 0 || index == frames.count - 1 ? 1.2 : 0.7))
+                        capture(to: "\(dir)/voice-frame\(index)-\(mode).png", window: panel)
+                    }
+                }
                 model.voice.busy = false
+                model.voice.listening = false
+                model.voice.reply = ""
                 model.voice.close()
             }
             if only == nil || only?.contains("agentjobs") == true {

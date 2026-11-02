@@ -99,3 +99,9 @@ Symptom: with another app in front, the Touch Bar's Control Strip item read "25"
 Cause: a collapsed Control Strip item is about 50 pt wide, fixed by the system. The glyph plus " 24:58" never fit; neither did the glyph plus "24m".
 Fix: the item is the glyph when idle and three characters of text when a session or break runs ("24m", "+3m"), red while recording. Verified with `screencapture -b` from Finder.
 Rule: a Control Strip item gets one glyph or three characters. Put anything longer in the modal bar behind the tap.
+
+## 2026-11-03 The voice panel's answer ended in "…" after one line
+Symptom: a long reply in the accent bubble showed one line and an ellipsis; the panel did not grow for it.
+Cause: `Text` with `.textSelection(.enabled)` inside the panel's stack measured as one line and truncated, so the panel's fit-to-content height was one line too. A first attempt to fix it was reverted because a snapshot run looked hung at the same time; the run was only slow (captures took about 20 s each that night) and finished on its own.
+Fix: `.fixedSize(horizontal: false, vertical: true)` on the reply text. Snapshot runs also disable the panel's animations (`Snapshot.animation`) and line-buffer their log, so a capture is never mid-transition and a slow run shows where it is.
+Rule: before calling a run hung, read its log with line buffering on and sample the process; an idle main thread means slow, not stuck.

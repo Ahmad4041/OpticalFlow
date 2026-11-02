@@ -188,6 +188,7 @@ final class VoiceAgent {
         transcript = job.request
         handledLocally = false
         mirror(job)
+        panel?.makeFirstResponder(nil)   // reading a job, not editing it: no selected text
     }
 
     /// Copies a job's progress into the panel state when it is the one on screen.
@@ -675,6 +676,7 @@ struct VoiceView: View {
                 } else if !voice.reply.isEmpty {
                     Text(voice.reply)
                         .font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)   // selectable text truncates to one line without this
                         .textSelection(.enabled)
                         .padding(.horizontal, Space.md)
                         .padding(.vertical, Space.sm)
@@ -693,8 +695,8 @@ struct VoiceView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { voice.fit(height: $0) }
         .frame(maxHeight: .infinity, alignment: .top)
         .ignoresSafeArea()   // the panel's title bar is transparent; draw under it
-        .animation(.default, value: voice.steps.count)
-        .animation(.default, value: voice.reply)
+        .animation(Snapshot.animation, value: voice.steps.count)
+        .animation(Snapshot.animation, value: voice.reply)
         .onAppear { focused = true }
     }
 
