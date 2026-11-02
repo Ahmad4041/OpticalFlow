@@ -511,7 +511,7 @@ final class VoiceAgent {
         process.standardInput = FileHandle.nullDevice
         try process.run()
         job.process = process
-        nonisolated(unsafe) let errHandle = err.fileHandleForReading
+        let errHandle = err.fileHandleForReading
         async let stderr = Task.detached { errHandle.readDataToEndOfFile() }.value
         // Both agents stream one JSON event per line; each command they run becomes a step on screen.
         var answer = ""
