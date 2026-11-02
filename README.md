@@ -1,17 +1,55 @@
-# OpticalFlow
+<p align="center"><img src="docs/screenshots/hero.png" alt="OpticalFlow" width="100%"></p>
+
+<p align="center">
+  <a href="https://github.com/Ahmad4041/OpticalFlow/actions/workflows/ci.yml"><img src="https://github.com/Ahmad4041/OpticalFlow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/macOS-26%2B-black" alt="macOS 26">
+  <img src="https://img.shields.io/badge/Swift-6.2-orange" alt="Swift 6.2">
+  <img src="https://img.shields.io/badge/data-stays%20on%20your%20Mac-brightgreen" alt="Local only">
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#use">Use</a> ·
+  <a href="#voice-and-ai">Voice and AI</a> ·
+  <a href="#hand-a-task-to-an-agent">Agent hand-off</a> ·
+  <a href="#cli-and-mcp">CLI and MCP</a> ·
+  <a href="docs/STORIES.md">Stories</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
 A native macOS app for developers, vibe coders and streamers: pick a task, run a focus session on it, record the screen while you work, and export the recording with YouTube chapters made from what you finished. Tasks can be spoken, and a task can be handed to Claude Code or Codex to work on in its own git worktree.
 
-Everything lives on your Mac. No account, no server, no telemetry.
+Everything lives on your Mac. No account, no server, no telemetry. Screenshots follow your GitHub theme.
 
-[![CI](https://github.com/Ahmad4041/OpticalFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Ahmad4041/OpticalFlow/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![macOS 26](https://img.shields.io/badge/macOS-26%2B-black)
-![Swift 6.2](https://img.shields.io/badge/Swift-6.2-orange)
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-running-dark.png"><img src="docs/screenshots/focus-running-light.png" alt="A running focus session with the countdown ring"></picture>
 
-| Today | Board | Focus |
-| --- | --- | --- |
-| ![Today list](docs/screenshots/today-light.png) | ![Kanban board](docs/screenshots/board-light.png) | ![Focus view](docs/screenshots/focus-light.png) |
+<table>
+<tr>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/today-dark.png"><img src="docs/screenshots/today-light.png" alt="Today list with the task detail"></picture></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/board-dark.png"><img src="docs/screenshots/board-light.png" alt="Kanban board with Backlog, To Do, Doing and Done"></picture></td>
+</tr>
+<tr>
+<td align="center"><b>Today</b>: priority, deadline, repeat, subtasks</td>
+<td align="center"><b>Board</b>: every project is also a kanban</td>
+</tr>
+<tr>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/recordings-dark.png"><img src="docs/screenshots/recordings-light.png" alt="A recording with its YouTube chapter list"></picture></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/sessions-dark.png"><img src="docs/screenshots/sessions-light.png" alt="The session log with this week's bars"></picture></td>
+</tr>
+<tr>
+<td align="center"><b>Recordings</b>: chapters from finished tasks and markers</td>
+<td align="center"><b>Sessions</b>: planned, worked, overflow</td>
+</tr>
+<tr>
+<td width="50%" align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/voice-dark.png"><img src="docs/screenshots/voice-light.png" alt="The voice panel showing the agent's steps" width="420"></picture></td>
+<td width="50%" align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/minitimer-dark.png"><img src="docs/screenshots/minitimer-light.png" alt="The floating mini timer" width="280"></picture></td>
+</tr>
+<tr>
+<td align="center"><b>Voice</b>: one sentence becomes tasks, dates and priorities</td>
+<td align="center"><b>Mini timer</b>: floats over everything</td>
+</tr>
+</table>
 
 ## What it does
 
