@@ -8,24 +8,24 @@ import UserNotifications
 /// chooses the display or window, so there is no Screen Recording prompt and no monthly nag.
 @Observable
 final class Recorder {
-    var micEnabled = UserDefaults.standard.object(forKey: "micEnabled") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(micEnabled, forKey: "micEnabled") }
+    var micEnabled = Prefs.store.object(forKey: "micEnabled") as? Bool ?? true {
+        didSet { Prefs.store.set(micEnabled, forKey: "micEnabled") }
     }
-    var cameraEnabled = UserDefaults.standard.object(forKey: "cameraEnabled") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(cameraEnabled, forKey: "cameraEnabled") }
+    var cameraEnabled = Prefs.store.object(forKey: "cameraEnabled") as? Bool ?? true {
+        didSet { Prefs.store.set(cameraEnabled, forKey: "cameraEnabled") }
     }
     /// Opt-in: when the pointer moves to another display, the capture follows it.
     /// Listing displays needs the Screen Recording permission the picker otherwise avoids.
-    var followsDisplay = UserDefaults.standard.bool(forKey: "followsDisplay") {
-        didSet { UserDefaults.standard.set(followsDisplay, forKey: "followsDisplay") }
+    var followsDisplay = Prefs.store.bool(forKey: "followsDisplay") {
+        didSet { Prefs.store.set(followsDisplay, forKey: "followsDisplay") }
     }
     var cameraLayout: CameraLayout = {
-        guard let data = UserDefaults.standard.data(forKey: "cameraLayout"),
+        guard let data = Prefs.store.data(forKey: "cameraLayout"),
               let layout = try? JSONDecoder().decode(CameraLayout.self, from: data) else { return CameraLayout() }
         return layout
     }() {
         didSet {
-            UserDefaults.standard.set(try? JSONEncoder().encode(cameraLayout), forKey: "cameraLayout")
+            Prefs.store.set(try? JSONEncoder().encode(cameraLayout), forKey: "cameraLayout")
             camera.bubble.apply(cameraLayout)
         }
     }

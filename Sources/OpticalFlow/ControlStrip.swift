@@ -9,8 +9,8 @@ final class ControlStrip: NSObject, NSTouchBarDelegate {
     static let enabledKey = "touchbar.strip"
 
     static var enabled: Bool {
-        get { UserDefaults.standard.object(forKey: enabledKey) as? Bool ?? true }
-        set { UserDefaults.standard.set(newValue, forKey: enabledKey) }
+        get { Prefs.store.object(forKey: enabledKey) as? Bool ?? true }
+        set { Prefs.store.set(newValue, forKey: enabledKey) }
     }
 
     private let identifier = NSTouchBarItem.Identifier("com.ahmadnaeem.opticalflow.strip")

@@ -15,8 +15,8 @@ final class AppModel {
     }
     var selection: PersistentIdentifier?
     /// Project pages show the board instead of the list.
-    var showsBoard = UserDefaults.standard.bool(forKey: "showsBoard") {
-        didSet { UserDefaults.standard.set(showsBoard, forKey: "showsBoard") }
+    var showsBoard = Prefs.store.bool(forKey: "showsBoard") {
+        didSet { Prefs.store.set(showsBoard, forKey: "showsBoard") }
     }
     /// Command-F. Non-empty: every page shows matching open tasks instead of its own list.
     var search = ""
@@ -30,8 +30,8 @@ final class AppModel {
     private var undoCompleted: [TaskItem] = []
 
     /// Settings reopens on the last tab. Test and snapshot runs leave it alone.
-    var settingsTab: SettingsTab = SettingsTab(rawValue: UserDefaults.standard.string(forKey: "settings.tab") ?? "") ?? .general {
-        didSet { if !Store.isOverridden { UserDefaults.standard.set(settingsTab.rawValue, forKey: "settings.tab") } }
+    var settingsTab: SettingsTab = SettingsTab(rawValue: Prefs.store.string(forKey: "settings.tab") ?? "") ?? .general {
+        didSet { if !Store.isOverridden { Prefs.store.set(settingsTab.rawValue, forKey: "settings.tab") } }
     }
 
     // Session
@@ -482,7 +482,7 @@ final class AppModel {
     // MARK: Session
 
     var plannedMinutes: Int {
-        let stored = UserDefaults.standard.integer(forKey: "plannedMinutes")
+        let stored = Prefs.store.integer(forKey: "plannedMinutes")
         return stored > 0 ? stored : 25
     }
 

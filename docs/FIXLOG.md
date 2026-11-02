@@ -87,3 +87,9 @@ Rule: Every optional relationship on a @Model declares its inverse and delete ru
 Cause: `build.sh` deleted and rewrote `~/Applications/OpticalFlow.app` while that app was running. macOS kills a running process whose signed binary changed on disk, and writes no report.
 Fix: the build is assembled in a staging folder; tests run the staged copy; the installed app is replaced only when it is not running, or with `--open`, which quits it first.
 Rule: Never overwrite a running app's bundle. Stage builds, test the staged copy, and install when the user is ready.
+
+## 2026-11-02 Self-test failed on a clean checkout: "camera on by default" was false
+Symptom: `tools/selftest.sh` reported 1 of 136 checks failing on one Mac and passing on another.
+Cause: the self-test and snapshots read and wrote `UserDefaults.standard`, the same preferences the person uses in the real app. Their camera was off, so the test saw it off; test runs also leaked their own writes (microphone, orchestrator) into real preferences.
+Fix: `Prefs.store` in App.swift. With `APP_STORE` set it is a separate suite, emptied at launch; otherwise it is `.standard`. Every preference read and write in the app goes through it, including `@AppStorage(…, store:)`.
+Rule: a test run touches nothing the user owns: not the store, not the preferences, not the installed app.

@@ -62,7 +62,7 @@ final class ThemeStore {
     static let brand: Theme? = Theme(id: "brand", name: "OpticalFlow", shades: .init(light: 0xA5ADFF, base: 0x5E6AD2, deep: 0x4650B8))
 
     var themeID: String {
-        didSet { UserDefaults.standard.set(themeID, forKey: "appearance.accent") }
+        didSet { Prefs.store.set(themeID, forKey: "appearance.accent") }
     }
 
     /// True while the Mac's accent is Multicolor.
@@ -78,7 +78,7 @@ final class ThemeStore {
 
     private init() {
         themeID = ProcessInfo.processInfo.environment["APP_ACCENT"]
-            ?? UserDefaults.standard.string(forKey: "appearance.accent") ?? Self.defaultID
+            ?? Prefs.store.string(forKey: "appearance.accent") ?? Self.defaultID
         NotificationCenter.default.addObserver(forName: NSColor.systemColorsDidChangeNotification,
                                                object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.macIsMulticolor = ThemeStore.readMulticolor() }

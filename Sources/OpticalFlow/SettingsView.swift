@@ -59,8 +59,8 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
 struct GeneralSettings: View {
     @Environment(AppModel.self) private var model
-    @AppStorage("plannedMinutes") private var plannedMinutes = 25
-    @AppStorage(ControlStrip.enabledKey) private var controlStrip = true
+    @AppStorage("plannedMinutes", store: Prefs.store) private var plannedMinutes = 25
+    @AppStorage(ControlStrip.enabledKey, store: Prefs.store) private var controlStrip = true
 
     var body: some View {
         @Bindable var recorder = model.recorder

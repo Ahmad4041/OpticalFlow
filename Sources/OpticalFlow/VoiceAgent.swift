@@ -114,7 +114,7 @@ final class AgentJob: Identifiable {
 @Observable
 final class VoiceAgent {
     var orchestrator: Orchestrator {
-        didSet { UserDefaults.standard.set(orchestrator.rawValue, forKey: "voice.orchestrator") }
+        didSet { Prefs.store.set(orchestrator.rawValue, forKey: "voice.orchestrator") }
     }
     var transcript = ""
     var reply = ""
@@ -144,7 +144,7 @@ final class VoiceAgent {
 
     init(model: AppModel) {
         self.model = model
-        let saved = UserDefaults.standard.string(forKey: "voice.orchestrator").flatMap(Orchestrator.init(rawValue:))
+        let saved = Prefs.store.string(forKey: "voice.orchestrator").flatMap(Orchestrator.init(rawValue:))
         orchestrator = saved.map { $0.isInstalled ? $0 : .builtin } ?? (Orchestrator.claude.isInstalled ? .claude : .builtin)
     }
 
@@ -745,8 +745,8 @@ struct VoiceAvatar: View {
 /// Which microphone the voice panel and the screen recorder read. nil follows the system default.
 enum Microphone {
     static var preferredUID: String? {
-        get { UserDefaults.standard.string(forKey: "microphone.uid") }
-        set { UserDefaults.standard.set(newValue, forKey: "microphone.uid") }
+        get { Prefs.store.string(forKey: "microphone.uid") }
+        set { Prefs.store.set(newValue, forKey: "microphone.uid") }
     }
 
     /// (uid, name) for every input device.

@@ -434,7 +434,7 @@ enum SelfTest {
             let styled = try await model.trim(original, start: 1, end: 2.5, withCamera: true)
             let styledSeconds = try await AVURLAsset(url: styled.url).load(.duration).seconds
             check("S-028 a rounded top-left large camera with blur exports", abs(styledSeconds - 1.5) < 0.3, "\(styledSeconds)")
-            check("S-028 the layout is remembered", UserDefaults.standard.data(forKey: "cameraLayout") != nil)
+            check("S-028 the layout is remembered", Prefs.store.data(forKey: "cameraLayout") != nil)
             model.recorder.cameraLayout = saved
             // S-027: the YouTube preset re-encodes to H.264.
             let yt = try await model.trim(original, start: 0, end: 2, youtube: true)

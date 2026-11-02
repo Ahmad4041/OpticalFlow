@@ -184,6 +184,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 }
 
+/// Preferences. A test run (APP_STORE in /tmp) gets its own suite, emptied at launch,
+/// so the self-test and snapshots never read or change the preferences of the person using the app.
+enum Prefs {
+    static let store: UserDefaults = {
+        guard Store.isOverridden else { return .standard }
+        let name = "com.ahmadnaeem.opticalflow.test"
+        let suite = UserDefaults(suiteName: name)!
+        suite.removePersistentDomain(forName: name)
+        return suite
+    }()
+}
+
 /// Where the data lives: ~/Library/Application Support/OpticalFlow/OpticalFlow.store
 enum Store {
     /// True when APP_STORE points somewhere else (tests, snapshots, seed data).
