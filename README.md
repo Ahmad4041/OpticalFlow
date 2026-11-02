@@ -18,9 +18,9 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-A native macOS app for developers, vibe coders and streamers: pick a task, run a focus session on it, record the screen while you work, and export the recording with YouTube chapters made from what you finished. Tasks can be spoken, and a task can be handed to Claude Code or Codex to work on in its own git worktree.
+**The AI productivity app for Mac.** Speak a task and it is filed with its date, priority and project. Focus on it with a timer that follows you to the menu bar, the mini timer and the Touch Bar. Record the screen while you work and export it with YouTube chapters. Hand the task to Claude Code or Codex and get back a branch with commits, not a promise.
 
-Everything lives on your Mac. No account, no server, no telemetry. Screenshots follow your GitHub theme.
+Native SwiftUI, one local database, no account, no server, no telemetry. The AI runs through the CLIs you already have installed and logged in. Screenshots below follow your GitHub theme.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-running-dark.png"><img src="docs/screenshots/focus-running-light.png" alt="A running focus session with the countdown ring"></picture>
 
@@ -51,13 +51,29 @@ Everything lives on your Mac. No account, no server, no telemetry. Screenshots f
 </tr>
 </table>
 
+## AI, in real time
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/ai-realtime-dark.png"><img src="docs/screenshots/ai-realtime-light.png" alt="Voice panel with the agent's steps, the background jobs list, and the result on the task card"></picture>
+
+Three levels, and you pick how far it goes:
+
+1. **On-device.** "Add fix the login loop to Fordan, due Friday at 3, high priority, repeat weekly." Dates, times, deadlines, repeats, priority, project and subtasks are parsed on the Mac. Nothing leaves it.
+2. **Orchestrator.** Anything the parser cannot settle goes to Claude Code or Codex, which drive the app through its own `opticalflow` CLI. Every command shows as it runs. Close the panel and keep working; the toolbar sparkles pulse until the answer lands on the card and a notification arrives.
+3. **Hand-off.** Give a task to the agent for real. It works on a branch in its own git worktree, the card shows commits, diff size and cost, and you open a draft pull request or discard the branch. The app never merges.
+
+## Touch Bar
+
+![Touch Bar: Record and Voice when idle, the countdown with Pause, Stop and Done during a session, and the Control Strip item next to brightness and volume while another app is in front](docs/screenshots/touchbar.png)
+
+In OpticalFlow the bar has the session controls. In any other app a Control Strip item keeps the countdown next to brightness and volume; tap it for Pause, Stop, Done, Record and Voice without switching apps. Turn it off in Settings > Sessions.
+
 ## What it does
 
-- **Tasks.** Inbox, Today, Upcoming, Someday and projects, keyboard first. Priority, subtasks, a planned day and a separate deadline, repeat rules, notes. Each project has a list and a kanban board (Backlog, To Do, Doing, Done).
-- **Focus sessions.** A countdown on a task from the window, the menu bar, a floating mini timer, or the Touch Bar Control Strip. Pause, overtime, breaks, idle detection, a session log.
-- **Recording.** Screen, system audio, microphone and camera through ScreenCaptureKit. Chapter markers while you record. Trim, camera bubble, follow the pointer, blur, YouTube preset on export. The chapter list comes from the tasks you completed and the markers you set.
 - **Voice and AI.** Press Control-Option-Space and say "add fix the login loop to Fordan, due Friday, high priority". Clear commands run at once on-device. Compound requests go to Claude Code or Codex, installed on your Mac, which call the app's own CLI. Answers land on the task card while you keep working.
 - **Hand a task to an agent.** Set a project's repository folder, choose Hand to Agent, and the app creates a branch and worktree, runs the agent with the task as its brief, then shows commits, diff size and cost on the card. Open a draft pull request or discard the branch. The app never merges.
+- **Tasks.** Inbox, Today, Upcoming, Someday and projects, keyboard first. Priority, subtasks, a planned day and a separate deadline, repeat rules, notes. Each project has a list and a kanban board (Backlog, To Do, Doing, Done).
+- **Focus sessions.** A countdown on a task from the window, the menu bar, a floating mini timer, or the Touch Bar. Pause, overtime, breaks, idle detection, a session log.
+- **Recording.** Screen, system audio, microphone and camera through ScreenCaptureKit. Chapter markers while you record. Trim, camera bubble, follow the pointer, blur, YouTube preset on export. The chapter list comes from the tasks you completed and the markers you set.
 - **CLI and MCP.** `opticalflow` drives the running app from any shell. The same binary is an MCP server for Claude Desktop.
 
 ## Requirements

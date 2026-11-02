@@ -49,6 +49,10 @@ APP_AGENT_SOCKET=/tmp/of-test.sock "$app/Contents/MacOS/OpticalFlow" status --js
 
 Use the staged binary as the CLI, as above. The `opticalflow` on your PATH points at the installed app.
 
+### Touch Bar
+
+`screencapture -b touchbar.png` photographs the real Touch Bar. Bring a test instance to the front for OpticalFlow's own bar. For the Control Strip item, add `--env APP_STRIP=1` to the test launch (test instances skip the strip otherwise, so they never replace yours), then activate another app and capture.
+
 ## CI
 
 GitHub Actions builds the package and runs the unit tests on a macOS 26 runner. The self-test and snapshots need a logged-in desktop with ScreenCaptureKit, so they run locally; paste their last lines into the pull request.
