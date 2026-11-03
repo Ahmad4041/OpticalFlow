@@ -424,6 +424,27 @@ Acceptance:
 UX: Task menu and card menu, Task > Hand to Agent (Option-Command-H), `opticalflow tasks handoff <id>`, `projects update --repo`. Done is the branch, not the agent's word: no commits means "finished without committing". Runs are capped at 80 turns and $5; git push, merge, checkout and web tools are disallowed.
 Status: done
 
+## M9 Cut the dead air
+
+### S-050 Remove silence in trim
+As the user, I switch on "Remove silence" in a recording's Trim section, see how many pauses go and how much shorter the file gets, and Export Trimmed writes a file with the pauses cut, the chapters moved to match.
+Screens: recordings
+Depends: S-009, S-048
+Acceptance:
+- [unit] keep(): a quiet run of 1 s or longer is cut with 0.2 s left on each side; shorter runs stay; the trim window bounds the result; chapters inside a cut are dropped and later ones move back.
+- [self] a 6 s clip with 3 s of silence in the middle exports about 2.6 s shorter, and the chapter after the pause moves back by the cut.
+UX: "Remove silence" toggle under the trim sliders with "3 pauses cut, 0:42 shorter" under its label; the toggle is disabled when the recording has no audio. The export is named "... no silence.mp4". A cut file is re-encoded (a passthrough copy would break frames at every cut). `opticalflow recordings export --silence`. Snapshot: recordings-trim.
+Status: done
+
+### S-051 Agent runs do not inherit API routing
+As the user, a Claude Code or Codex run started by the app talks to the vendor's own endpoint even when my shell exports ANTHROPIC_BASE_URL or OPENAI_BASE_URL for some other tool.
+Screens: settings-agent
+Depends: S-047
+Acceptance:
+- [self] the environment handed to the agent has no *_BASE_URL and no *_PROXY variable.
+UX: nothing visible; Settings > Agent gets one line saying which variables are dropped.
+Status: todo
+
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
 As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.

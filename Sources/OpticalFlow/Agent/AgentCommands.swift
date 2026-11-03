@@ -258,14 +258,16 @@ enum AgentCommands {
                               .init(name: "end", help: "end second (default the length)"),
                               .init(name: "camera", kind: .boolean, help: "composite the camera in its corner"),
                               .init(name: "follow-cursor", kind: .boolean, help: "2x zoom following the pointer"),
-                              .init(name: "youtube", kind: .boolean, help: "1080p H.264 preset (default true)")],
-                     example: "opticalflow recordings export 9c1e3f2a --start 10 --end 120 --camera --json") { args, model in
+                              .init(name: "youtube", kind: .boolean, help: "1080p H.264 preset (default true)"),
+                              .init(name: "silence", kind: .boolean, help: "cut every pause of a second or more")],
+                     example: "opticalflow recordings export 9c1e3f2a --start 10 --end 120 --camera --silence --json") { args, model in
             let recording = try findRecording(try args.required("id"), in: model)
             let start = Double(args.string("start") ?? "0") ?? 0
             let end = Double(args.string("end") ?? "") ?? recording.duration
             guard end - start >= 1 else { throw AgentError.invalid("--end must be at least one second after --start") }
             let camera = try args.bool("camera") ?? false, cursor = try args.bool("follow-cursor") ?? false, youtube = try args.bool("youtube") ?? true
-            Task { @MainActor in _ = try? await model.trim(recording, start: start, end: end, withCamera: camera, followCursor: cursor, youtube: youtube) }
+            let silence = try args.bool("silence") ?? false
+            Task { @MainActor in _ = try? await model.trim(recording, start: start, end: end, withCamera: camera, followCursor: cursor, youtube: youtube, removeSilence: silence) }
             return ["started": true, "from": String(recording.agentID.prefix(8)), "start": start, "end": end,
                     "hint": "run `opticalflow recordings list` in a minute to see the new file"]
         },

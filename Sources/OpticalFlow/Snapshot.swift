@@ -42,6 +42,12 @@ enum Snapshot {
                     model.selection = model.firstID(for: page)
                     try? await Task.sleep(for: .seconds(0.8))
                     capture(to: "\(dir)/\(page.snapshotName)-\(mode).png")
+                    if page.snapshotName == "recordings" {
+                        // The Trim section sits below the fold of the detail form.
+                        scrollToBottom()
+                        try? await Task.sleep(for: .seconds(0.5))
+                        capture(to: "\(dir)/recordings-trim-\(mode).png")
+                    }
                 }
             }
             if only == nil || only?.contains("board") == true, let project = model.projects.first {
@@ -191,6 +197,21 @@ enum Snapshot {
             for window in NSApp.windows { if let sheet = window.attachedSheet { window.endSheet(sheet) } }
             NSApp.terminate(nil)
         }
+    }
+
+    /// Scrolls the main window's longest scroll view (the detail form) to its end.
+    private static func scrollToBottom() {
+        guard let root = NSApp.windows.first(where: { $0.canBecomeMain && !$0.isSheet })?.contentView else { return }
+        var queue = [root], longest: (NSScrollView, CGFloat)?
+        while let view = queue.popLast() {
+            queue.append(contentsOf: view.subviews)
+            guard let scroll = view as? NSScrollView, let document = scroll.documentView else { continue }
+            let overflow = document.bounds.height - scroll.contentView.bounds.height
+            if overflow > (longest?.1 ?? 0) { longest = (scroll, overflow) }
+        }
+        guard let (scroll, overflow) = longest else { return }
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: scroll.documentView?.isFlipped == true ? overflow : 0))
+        scroll.reflectScrolledClipView(scroll.contentView)
     }
 
     /// Captures the real window with screencapture, so glass, sidebars, and

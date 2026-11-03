@@ -621,20 +621,23 @@ final class AppModel {
 
     /// Writes "<name> <start> to <end>[ with camera].mp4" next to the recording and returns its row, chapters shifted.
     /// With the camera, the sidecar is laid over the bottom-right corner and the file is re-encoded.
-    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval, withCamera: Bool = false, followCursor: Bool = false, youtube: Bool = false) async throws -> Recording {
+    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval, withCamera: Bool = false, followCursor: Bool = false,
+              youtube: Bool = false, removeSilence: Bool = false) async throws -> Recording {
         let stem = recording.url.deletingPathExtension().lastPathComponent
         let camera = withCamera && recording.hasCamera ? recording.cameraURL : nil
         let cursor = followCursor ? recording.cursorTrack : nil
+        let keep = removeSilence ? try await Exporter.levels(of: recording.url).map { SilenceCut.keep(levels: $0, step: SilenceCut.step, start: start, end: end) } : nil
         var suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
         if camera != nil { suffix += " with camera" }
         if cursor != nil { suffix += " zoomed" }
         if youtube { suffix += " youtube" }
+        if keep != nil { suffix += " no silence" }
         let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(suffix).mp4")
-        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, layout: recorder.cameraLayout, cursor: cursor, youtube: youtube, start: start, end: end, to: output)
+        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, layout: recorder.cameraLayout, cursor: cursor, youtube: youtube, start: start, end: end, keep: keep, to: output)
         let new = Recording(url: output, session: recording.session)
         new.startedAt = recording.startedAt.addingTimeInterval(start)
-        new.duration = end - start
-        new.chapters = ChapterList.trimmed(recording.chapters, start: start, end: end)
+        new.duration = keep.map(SilenceCut.length) ?? end - start
+        new.chapters = ChapterList.trimmed(recording.chapters, keep: keep ?? [start...end])
         new.cursorPath = cursor == nil ? nil : recording.cursorPath   // ponytail: offsets are not re-based; a second zoom of a zoom is unsupported
         context.insert(new)
         save()

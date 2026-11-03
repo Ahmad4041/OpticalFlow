@@ -225,3 +225,24 @@ func voiceIntents(_ text: String, expected: VoiceIntent) {
     #expect(Checklist.progress(done) == (1, 3))
     #expect(Checklist.index(of: "2", in: items) == 1 && Checklist.index(of: "ship", in: items) == 2 && Checklist.index(of: "nope", in: items) == nil)
 }
+
+@Test func silenceCut() {
+    // 0.1 s windows: loud 0-1 s, quiet 1-4 s, loud 4-6 s, quiet 6-6.5 s (too short to cut).
+    let levels: [Float] = Array(repeating: 0.3, count: 10) + Array(repeating: 0.001, count: 30)
+        + Array(repeating: 0.3, count: 20) + Array(repeating: 0.001, count: 5)
+    let keep = SilenceCut.keep(levels: levels, step: 0.1, start: 0, end: 6.5)
+    #expect(keep.count == 2)
+    #expect(abs(keep[0].lowerBound - 0) < 0.001 && abs(keep[0].upperBound - 1.2) < 0.001)
+    #expect(abs(keep[1].lowerBound - 3.8) < 0.001 && abs(keep[1].upperBound - 6.5) < 0.001)
+    #expect(abs(SilenceCut.length(keep) - 3.9) < 0.001)
+    // Inside the trim window only; a pause cut off by the window edge still counts from the edge.
+    let windowed = SilenceCut.keep(levels: levels, step: 0.1, start: 0.5, end: 2)
+    #expect(windowed.count == 2 && abs(windowed[0].upperBound - 1.2) < 0.001 && abs(windowed[1].lowerBound - 1.8) < 0.001)
+    #expect(SilenceCut.keep(levels: Array(repeating: 0.3, count: 60), step: 0.1, start: 1, end: 5) == [1...5])
+    // Chapters: before the cut stays, inside the cut goes, after the cut moves back by the cut's length.
+    let marks = [ChapterMark(title: "A", offset: 0.5), ChapterMark(title: "B", offset: 2), ChapterMark(title: "C", offset: 5)]
+    let out = ChapterList.trimmed(marks, keep: keep)
+    #expect(out.map(\.title) == ["A", "C"])
+    #expect(abs(out[1].offset - 2.4) < 0.001)
+    #expect(ChapterList.trimmed(marks, start: 1, end: 6) == [ChapterMark(title: "B", offset: 1), ChapterMark(title: "C", offset: 4)])
+}

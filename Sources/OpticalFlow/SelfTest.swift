@@ -456,6 +456,22 @@ enum SelfTest {
             let late = try await model.trim(original, start: 1, end: 3, withCamera: true)
             let lateSeconds = try await AVURLAsset(url: late.url).load(.duration).seconds
             check("S-012 a late camera keeps the screen's length", abs(lateSeconds - 2) < 0.3, "\(lateSeconds)")
+
+            // S-050: a tone for 1 s, 3 s of silence, a tone for 2 s. The pause goes, minus 0.2 s kept on each side.
+            let spoken = Recorder.directory.appending(path: "selftest-spoken.mp4")
+            try await TestVideo.make(at: spoken, seconds: 6, tone: [0..<1, 4..<6])
+            let talk = Recording(url: spoken, session: nil)
+            talk.duration = 6
+            talk.chapters = [ChapterMark(title: "Intro", offset: 0.5), ChapterMark(title: "Lost", offset: 2), ChapterMark(title: "After", offset: 5)]
+            context.insert(talk)
+            let levels = try await Exporter.levels(of: spoken) ?? []
+            let keep = SilenceCut.keep(levels: levels, step: SilenceCut.step, start: 0, end: 6)
+            check("S-050 levels find the one pause", keep.count == 2 && abs(SilenceCut.length(keep) - 3.4) < 0.15, "\(keep)")
+            let cut = try await model.trim(talk, start: 0, end: 6, removeSilence: true)
+            let cutSeconds = try await AVURLAsset(url: cut.url).load(.duration).seconds
+            check("S-050 the export is shorter by the pause", abs(cutSeconds - 3.4) < 0.3 && cut.url.lastPathComponent.hasSuffix("no silence.mp4"), "\(cutSeconds) \(cut.url.lastPathComponent)")
+            check("S-050 chapters move with the cut", cut.chapters.map(\.title) == ["Intro", "After"] && abs((cut.chapters.last?.offset ?? 0) - 2.4) < 0.15, "\(cut.chapters)")
+            check("S-050 a silent clip reports no audio", try await Exporter.levels(of: source) == nil)
         } catch {
             check("S-009/S-012 export", false, "\(error)")
         }
@@ -475,11 +491,13 @@ enum SelfTest {
     }
 }
 
-/// A short silent clip with a keyframe on every frame, so a passthrough trim is exact.
+/// A short clip with a keyframe on every frame, so a passthrough trim is exact. Silent unless `tone`
+/// lists the seconds that carry a 440 Hz tone; then there is an audio track, quiet elsewhere.
 enum TestVideo {
-    static func make(at url: URL, seconds: Int, width: Int = 320, height: Int = 240) async throws {
+    static func make(at url: URL, seconds: Int, width: Int = 320, height: Int = 240, tone: [Range<Int>]? = nil) async throws {
         try? FileManager.default.removeItem(at: url)
         let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+        if let tone { try writeTone(tone, seconds: seconds, to: writer) }
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
             AVVideoCodecKey: AVVideoCodecType.h264,
             AVVideoWidthKey: width,
@@ -492,6 +510,7 @@ enum TestVideo {
         writer.add(input)
         writer.startWriting()
         writer.startSession(atSourceTime: .zero)
+        try flushAudio()
         for frame in 0..<(seconds * 10) {
             while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(5)) }
             var buffer: CVPixelBuffer?
@@ -507,5 +526,49 @@ enum TestVideo {
         input.markAsFinished()
         await writer.finishWriting()
         if let error = writer.error { throw error }
+    }
+
+    /// Adds a mono AAC track: a sine where `loud` says, digital silence elsewhere. Written before the video starts.
+    private static func writeTone(_ loud: [Range<Int>], seconds: Int, to writer: AVAssetWriter) throws {
+        let rate = 16000
+        let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: rate, AVNumberOfChannelsKey: 1, AVEncoderBitRateKey: 48000,
+        ])
+        var asbd = AudioStreamBasicDescription(mSampleRate: Double(rate), mFormatID: kAudioFormatLinearPCM,
+                                               mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked, mBytesPerPacket: 4,
+                                               mFramesPerPacket: 1, mBytesPerFrame: 4, mChannelsPerFrame: 1, mBitsPerChannel: 32, mReserved: 0)
+        var format: CMAudioFormatDescription?
+        CMAudioFormatDescriptionCreate(allocator: nil, asbd: &asbd, layoutSize: 0, layout: nil, magicCookieSize: 0, magicCookie: nil,
+                                       extensions: nil, formatDescriptionOut: &format)
+        guard let format else { throw Exporter.ExportError.noVideo }
+        writer.add(input)
+        pending.append((input, { frame in
+            let second = frame / rate
+            return loud.contains { $0.contains(second) } ? 0.5 * sin(Float(frame) * 2 * .pi * 440 / Float(rate)) : 0
+        }, format, seconds * rate))
+    }
+
+    private static var pending: [(AVAssetWriterInput, (Int) -> Float, CMAudioFormatDescription, Int)] = []
+
+    /// Feeds every queued audio track in one go (short clips, so the whole track fits in memory).
+    private static func flushAudio() throws {
+        for (input, sample, format, frames) in pending {
+            let bytes = frames * 4
+            var samples = (0..<frames).map(sample)
+            var block: CMBlockBuffer?
+            CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: nil, blockLength: bytes, blockAllocator: nil, customBlockSource: nil,
+                                               offsetToData: 0, dataLength: bytes, flags: 0, blockBufferOut: &block)
+            guard let block else { throw Exporter.ExportError.noVideo }
+            try samples.withUnsafeMutableBytes { raw in
+                guard CMBlockBufferReplaceDataBytes(with: raw.baseAddress!, blockBuffer: block, offsetIntoDestination: 0, dataLength: bytes) == noErr
+                else { throw Exporter.ExportError.noVideo }
+            }
+            var buffer: CMSampleBuffer?
+            CMAudioSampleBufferCreateReadyWithPacketDescriptions(allocator: nil, dataBuffer: block, formatDescription: format, sampleCount: frames,
+                                                                 presentationTimeStamp: .zero, packetDescriptions: nil, sampleBufferOut: &buffer)
+            guard let buffer, input.append(buffer) else { throw Exporter.ExportError.noVideo }
+            input.markAsFinished()
+        }
+        pending = []
     }
 }

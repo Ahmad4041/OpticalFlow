@@ -60,6 +60,9 @@ struct RecordingDetail: View {
     @State private var withCamera = true
     @State private var followCursor = false
     @State private var youtube = true
+    @State private var removeSilence = false
+    /// Audio levels of the whole file, read once the toggle is on. Empty: the file has no audio.
+    @State private var levels: [Float]?
     @State private var player: AVPlayer?
     @State private var exportError: String?
 
@@ -121,6 +124,13 @@ struct RecordingDetail: View {
                 }
                 Toggle("YouTube preset (1080p H.264, AAC)", isOn: $youtube)
                     .help("Re-encodes to what YouTube recommends. Off keeps the original codec where possible.")
+                Toggle(isOn: $removeSilence) {
+                    Text("Remove silence")
+                    if !silenceSummary.isEmpty { Text(silenceSummary) }
+                }
+                .disabled(levels?.isEmpty == true)
+                .help("Cuts every pause of a second or more, keeping a moment on each side; chapters move with the cuts")
+                .onChange(of: removeSilence) { if removeSilence, levels == nil { readLevels() } }
                 HStack {
                     Button("Export Trimmed", systemImage: "scissors") { export() }
                         .disabled(exporting || !recording.fileExists || end - start < 1)
@@ -143,10 +153,32 @@ struct RecordingDetail: View {
             start = 0
             end = recording.duration
             exportError = nil
+            levels = nil
+            removeSilence = false
             player?.pause()
             player = recording.fileExists ? AVPlayer(url: recording.url) : nil
         }
         .onDisappear { player?.pause() }
+    }
+
+    /// "3 pauses cut, 0:42 shorter", or why there is nothing to cut.
+    private var silenceSummary: String {
+        guard removeSilence else { return "" }
+        guard let levels else { return "Listening…" }
+        guard !levels.isEmpty else { return "No audio in this recording" }
+        let keep = SilenceCut.keep(levels: levels, step: SilenceCut.step, start: start, end: end)
+        let cuts = max(0, keep.count - 1) + (keep.first?.lowerBound ?? start > start ? 1 : 0) + (keep.last?.upperBound ?? end < end ? 1 : 0)
+        guard cuts > 0 else { return "No pauses over a second" }
+        return "\(cuts) \(cuts == 1 ? "pause" : "pauses") cut, \(Countdown.clock(Int((end - start - SilenceCut.length(keep)).rounded()), padded: false)) shorter"
+    }
+
+    private func readLevels() {
+        let url = recording.url
+        Task {
+            let read = (try? await Exporter.levels(of: url)) ?? nil
+            levels = read ?? []
+            if read == nil { removeSilence = false }
+        }
     }
 
     private func export() {
@@ -154,7 +186,8 @@ struct RecordingDetail: View {
         Task {
             defer { exporting = false }
             do {
-                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera, followCursor: followCursor, youtube: youtube)
+                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera, followCursor: followCursor, youtube: youtube,
+                                               removeSilence: removeSilence && levels?.isEmpty == false)
                 model.selection = new.id
             } catch {
                 exportError = error.localizedDescription

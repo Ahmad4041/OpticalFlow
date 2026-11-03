@@ -53,7 +53,13 @@ extension ChapterList {
 
     /// Chapters that survive a trim to [start, end): offsets move back by `start`.
     public static func trimmed(_ marks: [ChapterMark], start: TimeInterval, end: TimeInterval) -> [ChapterMark] {
-        marks.filter { $0.offset >= start && $0.offset < end }
-            .map { ChapterMark(title: $0.title, offset: $0.offset - start) }
+        trimmed(marks, keep: [start...end])
+    }
+
+    /// Chapters that survive an export of the kept ranges, in export time. A mark inside a cut is dropped.
+    public static func trimmed(_ marks: [ChapterMark], keep: [ClosedRange<TimeInterval>]) -> [ChapterMark] {
+        marks.compactMap { mark in
+            SilenceCut.mapped(mark.offset, keep: keep).map { ChapterMark(title: mark.title, offset: $0) }
+        }
     }
 }

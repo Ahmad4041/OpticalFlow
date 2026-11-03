@@ -105,3 +105,9 @@ Symptom: a long reply in the accent bubble showed one line and an ellipsis; the 
 Cause: `Text` with `.textSelection(.enabled)` inside the panel's stack measured as one line and truncated, so the panel's fit-to-content height was one line too. A first attempt to fix it was reverted because a snapshot run looked hung at the same time; the run was only slow (captures took about 20 s each that night) and finished on its own.
 Fix: `.fixedSize(horizontal: false, vertical: true)` on the reply text. Snapshot runs also disable the panel's animations (`Snapshot.animation`) and line-buffer their log, so a capture is never mid-transition and a slow run shows where it is.
 Rule: before calling a run hung, read its log with line buffering on and sample the process; an idle main thread means slow, not stuck.
+
+## 2026-11-03 Camera composite failed with -12780 after the exporter learned about cuts
+Symptom: the self-test's camera export threw AVFoundation -11800/-12780 at `insertTimeRange`, with nothing wrong in the ranges.
+Cause: the refactor kept the camera's `AVAssetTrack` in an outer variable but let its `AVURLAsset` go out of scope. A track only weakly holds its asset, so the insert read from a released asset.
+Fix: the asset lives in the outer scope for as long as the track is used.
+Rule: keep the AVAsset alive as long as any of its tracks is in use; a track is a view into its asset, not an owner.
