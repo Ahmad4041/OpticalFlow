@@ -425,7 +425,7 @@ enum SelfTest {
             let cameraSource = Recorder.directory.appending(path: "selftest-camera.mov")
             try await TestVideo.make(at: cameraSource, seconds: 4, width: 160, height: 120)
             original.cameraPath = cameraSource.path
-            let composite = try await model.trim(original, start: 1, end: 3, withCamera: true)
+            let composite = try await model.trim(original, start: 1, end: 3, options: ExportOptions(camera: true))
             let asset = AVURLAsset(url: composite.url)
             let compositeSeconds = try await asset.load(.duration).seconds
             let size = try await asset.loadTracks(withMediaType: .video).first?.load(.naturalSize) ?? .zero
@@ -435,13 +435,13 @@ enum SelfTest {
             // S-028 / S-029: every corner, shape, and blur renders through the compositor.
             let saved = model.recorder.cameraLayout
             model.recorder.cameraLayout = CameraLayout(corner: .topLeft, size: .large, shape: .rounded, blurBackground: true)
-            let styled = try await model.trim(original, start: 1, end: 2.5, withCamera: true)
+            let styled = try await model.trim(original, start: 1, end: 2.5, options: ExportOptions(camera: true))
             let styledSeconds = try await AVURLAsset(url: styled.url).load(.duration).seconds
             check("S-028 a rounded top-left large camera with blur exports", abs(styledSeconds - 1.5) < 0.3, "\(styledSeconds)")
             check("S-028 the layout is remembered", Prefs.store.data(forKey: "cameraLayout") != nil)
             model.recorder.cameraLayout = saved
             // S-027: the YouTube preset re-encodes to H.264.
-            let yt = try await model.trim(original, start: 0, end: 2, youtube: true)
+            let yt = try await model.trim(original, start: 0, end: 2, options: ExportOptions(youtube: true))
             let ytTrack = try await AVURLAsset(url: yt.url).loadTracks(withMediaType: .video).first
             let ytCodec = (try await ytTrack?.load(.formatDescriptions))?.first.map { CMFormatDescriptionGetMediaSubType($0) }
             check("S-027 the YouTube export is H.264", ytCodec == kCMVideoCodecType_H264 && yt.url.lastPathComponent.hasSuffix("youtube.mp4"), "\(String(describing: ytCodec))")
@@ -450,14 +450,14 @@ enum SelfTest {
             let cursorURL = Recorder.directory.appending(path: "selftest-cursor.json")
             try JSONEncoder().encode(CursorTrack(samples: [.init(t: 0, x: 0.9, y: 0.9), .init(t: 2, x: 0.1, y: 0.1)])).write(to: cursorURL)
             original.cursorPath = cursorURL.path
-            let zoomed = try await model.trim(original, start: 0.5, end: 3, followCursor: true)
+            let zoomed = try await model.trim(original, start: 0.5, end: 3, options: ExportOptions(followCursor: true))
             let zoomedAsset = AVURLAsset(url: zoomed.url)
             let zoomedSize = try await zoomedAsset.loadTracks(withMediaType: .video).first?.load(.naturalSize) ?? .zero
             let zoomedSeconds = try await zoomedAsset.load(.duration).seconds
             check("S-031 a follow-cursor export keeps the frame size and range", zoomedSize == CGSize(width: 320, height: 240) && abs(zoomedSeconds - 2.5) < 0.3, "\(zoomedSize) \(zoomedSeconds)")
             check("S-031 the zoomed file is named", zoomed.url.lastPathComponent.hasSuffix("zoomed.mp4"))
             original.cameraOffset = 2.5   // camera woke up late: only its first 0.5 s overlap the 1...3 range
-            let late = try await model.trim(original, start: 1, end: 3, withCamera: true)
+            let late = try await model.trim(original, start: 1, end: 3, options: ExportOptions(camera: true))
             let lateSeconds = try await AVURLAsset(url: late.url).load(.duration).seconds
             check("S-012 a late camera keeps the screen's length", abs(lateSeconds - 2) < 0.3, "\(lateSeconds)")
 
@@ -471,7 +471,7 @@ enum SelfTest {
             let levels = try await Exporter.levels(of: spoken) ?? []
             let keep = SilenceCut.keep(levels: levels, step: SilenceCut.step, start: 0, end: 6)
             check("S-050 levels find the one pause", keep.count == 2 && abs(SilenceCut.length(keep) - 3.4) < 0.15, "\(keep)")
-            let cut = try await model.trim(talk, start: 0, end: 6, removeSilence: true)
+            let cut = try await model.trim(talk, start: 0, end: 6, options: ExportOptions(removeSilence: true))
             let cutSeconds = try await AVURLAsset(url: cut.url).load(.duration).seconds
             check("S-050 the export is shorter by the pause", abs(cutSeconds - 3.4) < 0.3 && cut.url.lastPathComponent.hasSuffix("no silence.mp4"), "\(cutSeconds) \(cut.url.lastPathComponent)")
             check("S-050 chapters move with the cut", cut.chapters.map(\.title) == ["Intro", "After"] && abs((cut.chapters.last?.offset ?? 0) - 2.4) < 0.15, "\(cut.chapters)")

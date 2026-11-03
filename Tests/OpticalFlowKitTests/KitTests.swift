@@ -246,3 +246,9 @@ func voiceIntents(_ text: String, expected: VoiceIntent) {
     #expect(abs(out[1].offset - 2.4) < 0.001)
     #expect(ChapterList.trimmed(marks, start: 1, end: 6) == [ChapterMark(title: "B", offset: 1), ChapterMark(title: "C", offset: 4)])
 }
+
+@Test func exportSuffix() {
+    #expect(ExportOptions().suffix == "")
+    #expect(ExportOptions(camera: true, followCursor: true, youtube: true, removeSilence: true).suffix == " with camera zoomed youtube no silence")
+    #expect(ExportOptions(youtube: true).suffix == " youtube")
+}

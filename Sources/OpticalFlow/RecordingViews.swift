@@ -186,8 +186,8 @@ struct RecordingDetail: View {
         Task {
             defer { exporting = false }
             do {
-                let new = try await model.trim(recording, start: start, end: end, withCamera: withCamera, followCursor: followCursor, youtube: youtube,
-                                               removeSilence: removeSilence && levels?.isEmpty == false)
+                let options = ExportOptions(camera: withCamera, followCursor: followCursor, youtube: youtube, removeSilence: removeSilence && levels?.isEmpty == false)
+                let new = try await model.trim(recording, start: start, end: end, options: options)
                 model.selection = new.id
             } catch {
                 exportError = error.localizedDescription

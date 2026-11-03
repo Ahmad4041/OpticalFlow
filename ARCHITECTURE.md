@@ -5,7 +5,7 @@ Two targets, one direction of dependency: `OpticalFlow` (app) depends on `Optica
 ## OpticalFlowKit (plain values, unit tested)
 - `TaskTitle`, `SmartList`, `DayGroup`, `DueDateParser`: task rules.
 - `SessionClock`, `Countdown`, `SessionStats`: time rules and labels.
-- `ChapterList`, `CameraLayout`, `CursorTrack`, `SilenceCut`: export rules.
+- `ChapterList`, `CameraLayout`, `CursorTrack`, `SilenceCut`, `ExportOptions`: export rules.
 
 ## OpticalFlow (main actor by default)
 - `App.swift`: scenes (window, menu bar extra, settings), menus, `AppDelegate` (notifications, quit while recording), `Store`.

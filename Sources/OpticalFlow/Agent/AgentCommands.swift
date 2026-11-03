@@ -265,9 +265,9 @@ enum AgentCommands {
             let start = Double(args.string("start") ?? "0") ?? 0
             let end = Double(args.string("end") ?? "") ?? recording.duration
             guard end - start >= 1 else { throw AgentError.invalid("--end must be at least one second after --start") }
-            let camera = try args.bool("camera") ?? false, cursor = try args.bool("follow-cursor") ?? false, youtube = try args.bool("youtube") ?? true
-            let silence = try args.bool("silence") ?? false
-            Task { @MainActor in _ = try? await model.trim(recording, start: start, end: end, withCamera: camera, followCursor: cursor, youtube: youtube, removeSilence: silence) }
+            let options = ExportOptions(camera: try args.bool("camera") ?? false, followCursor: try args.bool("follow-cursor") ?? false,
+                                        youtube: try args.bool("youtube") ?? true, removeSilence: try args.bool("silence") ?? false)
+            Task { @MainActor in _ = try? await model.trim(recording, start: start, end: end, options: options) }
             return ["started": true, "from": String(recording.agentID.prefix(8)), "start": start, "end": end,
                     "hint": "run `opticalflow recordings list` in a minute to see the new file"]
         },

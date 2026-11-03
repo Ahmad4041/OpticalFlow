@@ -621,19 +621,16 @@ final class AppModel {
 
     /// Writes "<name> <start> to <end>[ with camera].mp4" next to the recording and returns its row, chapters shifted.
     /// With the camera, the sidecar is laid over the bottom-right corner and the file is re-encoded.
-    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval, withCamera: Bool = false, followCursor: Bool = false,
-              youtube: Bool = false, removeSilence: Bool = false) async throws -> Recording {
+    func trim(_ recording: Recording, start: TimeInterval, end: TimeInterval, options: ExportOptions = ExportOptions()) async throws -> Recording {
         let stem = recording.url.deletingPathExtension().lastPathComponent
-        let camera = withCamera && recording.hasCamera ? recording.cameraURL : nil
-        let cursor = followCursor ? recording.cursorTrack : nil
-        let keep = removeSilence ? try await Exporter.levels(of: recording.url).map { SilenceCut.keep(levels: $0, step: SilenceCut.step, start: start, end: end) } : nil
-        var suffix = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
-        if camera != nil { suffix += " with camera" }
-        if cursor != nil { suffix += " zoomed" }
-        if youtube { suffix += " youtube" }
-        if keep != nil { suffix += " no silence" }
-        let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(suffix).mp4")
-        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, layout: recorder.cameraLayout, cursor: cursor, youtube: youtube, start: start, end: end, keep: keep, to: output)
+        let camera = options.camera && recording.hasCamera ? recording.cameraURL : nil
+        let cursor = options.followCursor ? recording.cursorTrack : nil
+        let keep = options.removeSilence ? try await Exporter.levels(of: recording.url).map { SilenceCut.keep(levels: $0, step: SilenceCut.step, start: start, end: end) } : nil
+        // The name says what actually applied: no camera file, no cursor track, or no audio drops the word.
+        let applied = ExportOptions(camera: camera != nil, followCursor: cursor != nil, youtube: options.youtube, removeSilence: keep != nil)
+        let range = "\(Countdown.clock(Int(start))) to \(Countdown.clock(Int(end)))".replacingOccurrences(of: ":", with: ".")
+        let output = recording.url.deletingLastPathComponent().appending(path: "\(stem) \(range)\(applied.suffix).mp4")
+        try await Exporter.export(screen: recording.url, camera: camera, cameraOffset: recording.cameraOffset, layout: recorder.cameraLayout, cursor: cursor, youtube: options.youtube, start: start, end: end, keep: keep, to: output)
         let new = Recording(url: output, session: recording.session)
         new.startedAt = recording.startedAt.addingTimeInterval(start)
         new.duration = keep.map(SilenceCut.length) ?? end - start

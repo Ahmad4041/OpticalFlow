@@ -10,7 +10,7 @@ Proposal: `VoiceViews.swift` holds the six view and picker types and `Microphone
 Proof: build with no warnings, self-test 141 before and after, voice and agentjobs snapshots unchanged.
 Plan: one commit.
 
-## Export options as one value  [Worth exploring]
+## Export options as one value  [Worth exploring]  — done 2026-11-04
 Files: AppModel.trim (6 parameters), RecordingDetail.export, AgentCommands "recordings export", SelfTest (nine calls).
 Signal: the fourth Bool (`removeSilence`) landed in M9; the 2026-10-31 review said a fourth would tip it.
 Proposal: `struct ExportOptions { var camera = false, followCursor = false, youtube = false, removeSilence = false }` in the Kit, passed as one argument; `Exporter.export` takes it too. The file suffix moves next to it (`options.suffix`), which the model builds by hand today.
@@ -25,4 +25,4 @@ It holds tasks, projects, sessions, breaks, idle, export, URL commands, voice he
 - A `Silence` analyzer protocol with a test adapter: the self-test feeds `Exporter.levels` a synthesized clip, which is the real path. One conformer would be a hypothetical seam.
 - Moving `TestVideo` out of SelfTest: used once, by the self-test, and the audio writer is 40 lines.
 
-Top recommendation: the voice views move (done). Next: `ExportOptions` when the fifth export option is asked for.
+Top recommendation: the voice views move (done). `ExportOptions` done the next day on the user's go-ahead.
