@@ -295,6 +295,10 @@ enum SelfTest {
         model.voice.attach(job)
         check("S-047 the reply is written on the touched task", aiTask.agentReply == "Done, it is urgent now." && aiTask.agentReplyAt != nil)
         check("S-047 finished jobs clear", { model.voice.clearFinishedJobs(); return model.voice.jobs.isEmpty }())
+        // S-051: an agent run never inherits another tool's API routing.
+        let agentEnv = Orchestrator.environment(from: ["ANTHROPIC_BASE_URL": "http://proxy", "OPENAI_BASE_URL": "http://proxy", "OPENAI_API_BASE": "x", "HOME": "/h", "PATH": "/usr/bin"])
+        check("S-051 base URLs are dropped and PATH gains the tool folders",
+              agentEnv.keys.sorted() == ["HOME", "PATH"] && agentEnv["PATH"]!.hasPrefix("/usr/bin:") && agentEnv["PATH"]!.hasSuffix("/opt/homebrew/bin"), "\(agentEnv)")
         model.delete(aiTask)
 
         // S-048: chapter markers while recording.

@@ -20,6 +20,15 @@ enum Orchestrator: String, CaseIterable, Identifiable {
         }
     }
 
+    /// What an agent run inherits: the app's environment with the usual tool folders on PATH, minus any
+    /// *_BASE_URL or *_API_BASE a shell exported for some other tool, so the agent talks to its own vendor.
+    static func environment(from base: [String: String] = ProcessInfo.processInfo.environment) -> [String: String] {
+        var env = base.filter { !($0.key.hasSuffix("_BASE_URL") || $0.key.hasSuffix("_API_BASE")) }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        env["PATH"] = [env["PATH"] ?? "/usr/bin:/bin", "\(home)/.local/bin", "/usr/local/bin", "/opt/homebrew/bin"].joined(separator: ":")
+        return env
+    }
+
     var blurb: String {
         switch self {
         case .builtin: "Understands add, complete, start, stop, priority, and notes. Anything else becomes a new task."
@@ -502,10 +511,7 @@ final class VoiceAgent {
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = job.isHandoff ? which.handoffArguments(prompt: prompt) : which.arguments(prompt: prompt, workdir: workdir)
         process.currentDirectoryURL = job.worktree ?? URL(fileURLWithPath: workdir)
-        var env = ProcessInfo.processInfo.environment
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        env["PATH"] = [env["PATH"] ?? "/usr/bin:/bin", "\(home)/.local/bin", "/usr/local/bin", "/opt/homebrew/bin"].joined(separator: ":")
-        process.environment = env
+        process.environment = Orchestrator.environment()
         let out = Pipe(), err = Pipe()
         process.standardOutput = out
         process.standardError = err

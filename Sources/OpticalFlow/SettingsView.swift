@@ -138,8 +138,8 @@ struct AgentSettings: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
-        Section("Next phase") {
-            Text("Hand a task to an agent in a sandbox for the long run. Not built yet; the orchestrator above is the first step.")
+        Section("Hand-off") {
+            Text("Hand to Agent runs the orchestrator in a git worktree of the project's repository. Runs see your PATH plus ~/.local/bin, /usr/local/bin and /opt/homebrew/bin; any *_BASE_URL variable is dropped, so the agent talks to its own vendor.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }

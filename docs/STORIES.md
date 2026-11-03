@@ -441,9 +441,9 @@ As the user, a Claude Code or Codex run started by the app talks to the vendor's
 Screens: settings-agent
 Depends: S-047
 Acceptance:
-- [self] the environment handed to the agent has no *_BASE_URL and no *_PROXY variable.
-UX: nothing visible; Settings > Agent gets one line saying which variables are dropped.
-Status: todo
+- [self] the environment handed to the agent has no *_BASE_URL or *_API_BASE variable; PATH gains the tool folders.
+UX: nothing visible; Settings > Agent's stale "Next phase" section becomes "Hand-off", one line on the worktree and the dropped variables. Proxy variables stay: a Mac behind a corporate proxy needs them to reach anything.
+Status: done
 
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
