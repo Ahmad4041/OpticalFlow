@@ -68,11 +68,14 @@ struct ContentView: View {
     private var sessionToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             if let session = model.session {
-                Text(session.task?.title ?? "Session")
-                    .lineLimit(1)
-                    .frame(maxWidth: 200)
-                Text(model.menuLabel ?? "")
-                    .monospacedDigit()
+                // One item: two Text items share one glass capsule with no gap between them.
+                HStack(spacing: Space.sm) {
+                    Text(session.task?.title ?? "Session")
+                        .lineLimit(1)
+                        .frame(maxWidth: 200)
+                    Text(model.menuLabel ?? "")
+                        .monospacedDigit()
+                }
                 Button(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill") {
                     if model.paused { model.resume() } else { model.pause() }
                 }
