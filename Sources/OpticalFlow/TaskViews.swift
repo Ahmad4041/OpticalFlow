@@ -17,6 +17,11 @@ struct TaskList: View {
         searching ? tasks.filter { model.matches($0) } : tasks.filter { model.visible($0, on: page) }
     }
 
+    private var pageProject: Project? {
+        if case .project(let id) = page { return projects.first { $0.uuid == id } }
+        return nil
+    }
+
     private var title: String {
         if case .project(let id) = page { return projects.first { $0.uuid == id }?.name ?? "Project" }
         return page.title
@@ -62,42 +67,48 @@ struct TaskList: View {
 
     var body: some View {
         @Bindable var model = model
-        List(selection: $model.selection) {
-            if page == .list(.upcoming) && !searching {
-                ForEach(days, id: \.0) { day, tasks in
-                    Section(DayGroup.label(for: day)) {
-                        ForEach(tasks) { row($0) }
+        VStack(spacing: 0) {
+            if let project = pageProject, !searching {
+                ProjectHeader(project: project, compact: true)
+                Divider()
+            }
+            List(selection: $model.selection) {
+                if page == .list(.upcoming) && !searching {
+                    ForEach(days, id: \.0) { day, tasks in
+                        Section(DayGroup.label(for: day)) {
+                            ForEach(tasks) { row($0) }
+                        }
                     }
-                }
-            } else {
-                ForEach(visible) { row($0) }
-            }
-            if model.draftTitle != nil {
-                HStack(spacing: Space.sm) {
-                    Image(systemName: "circle").foregroundStyle(.tertiary)
-                    TextField("New task, then a date: tomorrow, fri, in 3 days, 5 nov", text: $draft)
-                        .textFieldStyle(.plain)
-                        .focused($draftFocused)
-                        .onSubmit {
-                            model.addTask(title: draft, on: page)
-                            draft = ""
-                            model.draftTitle = nil
-                        }
-                        .onExitCommand {
-                            draft = ""
-                            model.draftTitle = nil
-                        }
-                }
-                .onAppear { draftFocused = true }
-            }
-        }
-        .overlay {
-            if visible.isEmpty && model.draftTitle == nil {
-                if searching {
-                    ContentUnavailableView.search(text: model.search)
                 } else {
-                    ContentUnavailableView(page.emptyState.title, systemImage: page.symbol,
-                                           description: Text(page.emptyState.hint))
+                    ForEach(visible) { row($0) }
+                }
+                if model.draftTitle != nil {
+                    HStack(spacing: Space.sm) {
+                        Image(systemName: "circle").foregroundStyle(.tertiary)
+                        TextField("New task, then a date: tomorrow, fri, in 3 days, 5 nov", text: $draft)
+                            .textFieldStyle(.plain)
+                            .focused($draftFocused)
+                            .onSubmit {
+                                model.addTask(title: draft, on: page)
+                                draft = ""
+                                model.draftTitle = nil
+                            }
+                            .onExitCommand {
+                                draft = ""
+                                model.draftTitle = nil
+                            }
+                    }
+                    .onAppear { draftFocused = true }
+                }
+            }
+            .overlay {
+                if visible.isEmpty && model.draftTitle == nil {
+                    if searching {
+                        ContentUnavailableView.search(text: model.search)
+                    } else {
+                        ContentUnavailableView(page.emptyState.title, systemImage: page.symbol,
+                                               description: Text(page.emptyState.hint))
+                    }
                 }
             }
         }
@@ -176,9 +187,8 @@ struct TaskRow: View {
                     .help("\(progress.done) of \(progress.total) subtasks done")
             }
             if showProject, let project = task.project {
-                Image(systemName: "circle.fill")
-                    .font(.caption2)
-                    .foregroundStyle(project.color)
+                ProjectIcon(project: project, size: 12)
+                    .help(project.name)
             }
         }
         .opacity(task.isDone ? 0.5 : 1)
@@ -199,7 +209,7 @@ struct TaskDetail: View {
             Picker("Project", selection: $task.project) {
                 Text("None").tag(Project?.none)
                 ForEach(projects) { project in
-                    Text(project.name).tag(Optional(project))
+                    Label { Text(project.name) } icon: { ProjectIcon(project: project) }.tag(Optional(project))
                 }
             }
             Toggle("Due date", isOn: Binding(get: { task.due != nil }, set: { task.due = $0 ? .now : nil }))

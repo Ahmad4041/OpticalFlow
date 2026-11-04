@@ -71,7 +71,7 @@ In OpticalFlow the bar has the session controls. In any other app a Control Stri
 
 - **Voice and AI.** Press Control-Option-Space and say "add fix the login loop to Fordan, due Friday, high priority". Clear commands run at once on-device. Compound requests go to Claude Code or Codex, installed on your Mac, which call the app's own CLI. Answers land on the task card while you keep working.
 - **Hand a task to an agent.** Set a project's repository folder, choose Hand to Agent, and the app creates a branch and worktree, runs the agent with the task as its brief, then shows commits, diff size and cost on the card. Open a draft pull request or discard the branch. The app never merges.
-- **Tasks.** Inbox, Today, Upcoming, Someday and projects, keyboard first. Priority, subtasks, a planned day and a separate deadline, repeat rules, notes. Each project has a list and a kanban board (Backlog, To Do, Doing, Done).
+- **Tasks.** Inbox, Today, Upcoming, Someday and projects, keyboard first. Priority, subtasks, a planned day and a separate deadline, repeat rules, notes. Each project has its own color, an SF Symbol or your logo, and a list and a kanban board (Backlog, To Do, Doing, Done).
 - **Focus sessions.** A countdown on a task from the window, the menu bar, a floating mini timer, or the Touch Bar. Pause, overtime, breaks, idle detection, a session log.
 - **Recording.** Screen, system audio, microphone and camera through ScreenCaptureKit. Chapter markers while you record. Trim, remove the pauses, camera bubble, follow the pointer, blur, YouTube preset on export. The chapter list comes from the tasks you completed and the markers you set.
 - **CLI and MCP.** `opticalflow` drives the running app from any shell. The same binary is an MCP server for Claude Desktop.
@@ -129,7 +129,7 @@ The built-in microphone on some MacBook Pro models delivers silence to apps. If 
 
 ### Hand a task to an agent
 
-1. Right-click a project in the sidebar, Set Repository Folder, pick the git checkout.
+1. Open Edit Project (Shift-Command-E) or right-click the project in the sidebar, and choose the git checkout as its repository.
 2. On a task in that project, choose Hand to Agent.
 3. The agent works on branch `opticalflow/<task id>` in a worktree under `~/Library/Application Support/OpticalFlow/worktrees/`. Your checkout is never touched. Runs stop at 80 turns or five dollars, and the agent may not push, merge or switch branches.
 4. When it finishes the card shows the commit count and diff. The task detail has Open Pull Request, Reveal Worktree and Discard Branch.

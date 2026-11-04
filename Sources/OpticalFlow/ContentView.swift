@@ -6,7 +6,6 @@ import OpticalFlowKit
 struct ContentView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openSettings) private var openSettings
-    @State private var projectName = ""
 
     @State private var bootstrapped = false
 
@@ -17,8 +16,11 @@ struct ContentView: View {
                 NavigationSplitView {
                     Sidebar()
                 } detail: {
-                    BoardView(project: project)
-                        .navigationTitle(project.name)
+                    VStack(spacing: 0) {
+                        ProjectHeader(project: project)
+                        BoardView(project: project)
+                    }
+                    .navigationTitle(project.name)
                         .toolbar {
                             ViewModeToolbar()
                             ToolbarItem {
@@ -40,17 +42,9 @@ struct ContentView: View {
         }
         .toolbar { sessionToolbar }
         .touchBar { TouchBarStrip() }
-        .alert(promptTitle, isPresented: Binding(get: { model.projectPrompt != nil },
-                                                  set: { if !$0 { model.projectPrompt = nil } })) {
-            TextField("Name", text: $projectName)
-            Button(isRename ? "Rename" : "Create") {
-                model.commitProjectPrompt(name: projectName)
-                projectName = ""
-            }
-            Button("Cancel", role: .cancel) { projectName = "" }
-        }
-        .onChange(of: model.projectPrompt) {
-            if case .rename(let project) = model.projectPrompt { projectName = project.name }
+        .sheet(item: Binding(get: { model.projectPrompt.map(ProjectPromptItem.init) },
+                             set: { if $0 == nil { model.projectPrompt = nil } })) { item in
+            ProjectEditor(prompt: item.prompt)
         }
         .task {
             // The split view swaps between list and board mode; the hooks below run once.
@@ -69,12 +63,6 @@ struct ContentView: View {
         return false
     }
 
-    private var isRename: Bool {
-        if case .rename = model.projectPrompt { return true }
-        return false
-    }
-
-    private var promptTitle: String { isRename ? "Rename Project" : "New Project" }
 
     @ToolbarContentBuilder
     private var sessionToolbar: some ToolbarContent {
@@ -158,7 +146,7 @@ struct Sidebar: View {
                                 .monospacedDigit()
                         }
                     } icon: {
-                        Image(systemName: "circle.fill").foregroundStyle(project.color)
+                        ProjectIcon(project: project)
                     }
                     .tag(Page.project(project.uuid))
                     .dropDestination(for: String.self) { ids, _ in
@@ -170,7 +158,7 @@ struct Sidebar: View {
                             model.sidebar = .project(project.uuid)
                             model.draftTitle = ""
                         }
-                        Button("Rename…") { model.projectPrompt = .rename(project) }
+                        Button("Edit Project…") { model.projectPrompt = .edit(project) }
                         Button(project.repoPath == nil ? "Set Repository Folder…" : "Change Repository Folder…") { model.chooseRepository(for: project) }
                         if let repo = project.repoPath {
                             Button("Forget Repository (\((repo as NSString).lastPathComponent))") { model.setRepository(nil, for: project) }

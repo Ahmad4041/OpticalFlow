@@ -409,20 +409,48 @@ final class AppModel {
         save()
     }
 
-    func commitProjectPrompt(name: String) {
-        defer { projectPrompt = nil }
-        guard let clean = TaskTitle.clean(name) else { return }
-        switch projectPrompt {
+    /// What the project sheet starts with: the project's values, or a fresh name with the next color in turn.
+    func draft(for prompt: ProjectPrompt) -> ProjectDraft {
+        switch prompt {
         case .new:
-            let project = Project(name: clean, color: ProjectColor.allCases[projects.count % ProjectColor.allCases.count])
-            context.insert(project)
-            save()
-            sidebar = .project(project.uuid)
-        case .rename(let project):
-            project.name = clean
-            save()
-        case nil: break
+            ProjectDraft(color: ProjectColor.allCases[projects.count % ProjectColor.allCases.count])
+        case .edit(let project):
+            ProjectDraft(name: project.name, color: ProjectColor(rawValue: project.colorName) ?? .blue,
+                         symbol: project.symbol, imageData: project.imageData)
         }
+    }
+
+    /// Creates or updates the project the sheet is open for. An empty name changes nothing.
+    func commitProjectPrompt(_ draft: ProjectDraft) {
+        defer { projectPrompt = nil }
+        guard let clean = TaskTitle.clean(draft.name), let prompt = projectPrompt else { return }
+        let project: Project
+        switch prompt {
+        case .new:
+            project = Project(name: clean)
+            context.insert(project)
+            sidebar = .project(project.uuid)
+        case .edit(let existing):
+            project = existing
+            project.name = clean
+        }
+        project.colorName = draft.color.rawValue
+        project.symbol = draft.symbol
+        project.imageData = draft.imageData
+        save()
+    }
+
+    /// Name only, keeping everything else: the CLI and the self-test.
+    func commitProjectPrompt(name: String) {
+        var draft = draft(for: projectPrompt ?? .new)
+        draft.name = name
+        commitProjectPrompt(draft)
+    }
+
+    /// The project the File menu's Edit Project acts on: the project page shown, else the selected task's.
+    var currentProject: Project? {
+        if case .project(let id)? = sidebar { return project(id) }
+        return selectedTask?.project
     }
 
     /// Asks for the project's repository folder with the system open panel.

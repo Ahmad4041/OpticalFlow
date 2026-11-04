@@ -34,7 +34,7 @@ Acceptance:
 - [snap] Sidebar shows the six fixed pages, a "Projects" section, and each project with its color dot and count.
 - [self] Command-2 selects Today; Today lists tasks due today or overdue, sorted by due then order.
 - [unit] Smart list predicates: Inbox = no project and not someday; Upcoming = due after today; Someday = someday flag.
-UX: NavigationSplitView. Sidebar symbols: tray, star, calendar, archivebox, timer, record.circle. Projects get a filled circle in their color. New project via File > New Project (Command-Shift-N), inline rename on double-click.
+UX: NavigationSplitView. Sidebar symbols: tray, star, calendar, archivebox, timer, record.circle. Projects get a filled circle in their color. New project via File > New Project (Command-Shift-N); editing moved to a sheet in S-052.
 Status: done
 
 ### S-004 Move a task to a project or set its date
@@ -443,6 +443,18 @@ Depends: S-047
 Acceptance:
 - [self] the environment handed to the agent has no *_BASE_URL or *_API_BASE variable; PATH gains the tool folders.
 UX: nothing visible; Settings > Agent's stale "Next phase" section becomes "Hand-off", one line on the worktree and the dropped variables. Proxy variables stay: a Mac behind a corporate proxy needs them to reach anything.
+Status: done
+
+## M10 Projects
+
+### S-052 Edit a project: name, color, icon, or image
+As the user, I open Edit Project from a project's header, its sidebar menu, or File > Edit Project, and change its name, pick one of twelve colors, pick an SF Symbol icon, or drop in my own logo; the sidebar, rows, focus view, mini timer, and board header show it at once.
+Screens: projectedit, project, board
+Depends: S-003
+Acceptance:
+- [self] the editor opens with the current values; Save writes name, color, symbol, and image together; an empty name changes nothing; a picture becomes a 128 px square PNG; a non-image is refused; old color names still load.
+- [snap] the project page and the board open with a header: icon, name, open and done-this-week counts, repository, Edit Project.
+UX: a sheet replaces the rename alert (whose field opened empty). Name with a live icon preview, color swatches, a 7-column icon grid, an Image section that takes a file or a drop and replaces the icon, the repository for hand-offs, Delete. File > Edit Project (Shift-Command-E). `opticalflow projects update --name --color --symbol --image`.
 Status: done
 
 ## M5 System

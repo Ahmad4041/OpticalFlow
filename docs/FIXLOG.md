@@ -111,3 +111,9 @@ Symptom: the self-test's camera export threw AVFoundation -11800/-12780 at `inse
 Cause: the refactor kept the camera's `AVAssetTrack` in an outer variable but let its `AVURLAsset` go out of scope. A track only weakly holds its asset, so the insert read from a released asset.
 Fix: the asset lives in the outer scope for as long as the track is used.
 Rule: keep the AVAsset alive as long as any of its tracks is in use; a track is a view into its asset, not an owner.
+
+## 2026-11-04 Rename Project opened with an empty name
+Symptom: Rename… on a project showed an alert whose field was empty, so a rename meant retyping the whole name; color and icon could not be changed at all.
+Cause: the alert's text field was bound to a state that `onChange(of: projectPrompt)` filled in, but SwiftUI builds an alert's contents when it is presented, before that change ran.
+Fix: a sheet whose editor copies the project into a draft in its own `onAppear`, and writes the draft back on Save.
+Rule: a form that edits an existing value loads that value inside the view that shows it, never from a change handler on the presenting view.

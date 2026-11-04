@@ -14,6 +14,7 @@ Two targets, one direction of dependency: `OpticalFlow` (app) depends on `Optica
 - `Exporter` + `StudioCompositor`: trim, camera overlay, blur, follow-cursor zoom, YouTube preset. `nonisolated`, runs on AVFoundation's queues.
 - `VoiceAgent`: the orchestrator choice, `AgentJob`, speech recognition, the agent runner (`claude -p` or `codex exec` as a `Process`), and the floating panel. `VoiceViews`: the panel's SwiftUI, the toolbar activity button, the jobs list, the microphone picker. `Handoff`: git worktrees and the brief.
 - Views: `ContentView` (split view, sidebar, toolbar), `TaskViews`, `SessionViews`, `RecordingViews`, `BoardView`, `MenuBarPanel`, `MiniTimer`, `QuickEntry`, `SettingsView`.
+- `ProjectEditor`: the project sheet (`ProjectDraft` in, `AppModel.commitProjectPrompt` out), `ProjectIcon` (image, else symbol in color; used wherever a project is shown), `ProjectHeader`, and `ProjectImage` (any picture to a 128 px PNG stored in the database).
 - Agent hooks: `SeedData`, `SelfTest`, `Snapshot`, all gated on `APP_STORE` in /tmp.
 
 ## Seams

@@ -186,9 +186,7 @@ struct FocusView: View {
                 .lineLimit(2)
             HStack(spacing: Space.sm) {
                 if let project = task?.project {
-                    Image(systemName: "circle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(project.color)
+                    ProjectIcon(project: project, size: 12)
                     Text(project.name)
                 }
                 if let task, let due = task.due {

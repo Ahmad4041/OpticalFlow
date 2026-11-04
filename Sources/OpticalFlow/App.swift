@@ -47,6 +47,9 @@ struct OpticalFlowApp: App {
                     .keyboardShortcut("n")
                 Button("New Project…") { model.projectPrompt = .new }
                     .keyboardShortcut("n", modifiers: [.command, .shift])
+                Button("Edit Project…") { if let project = model.currentProject { model.projectPrompt = .edit(project) } }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                    .disabled(model.currentProject == nil)
                 Button("Quick Entry") { model.quickEntry.toggle() }
                     .keyboardShortcut(.space, modifiers: .control)
                 Button("Voice Command") { model.voice.toggle() }

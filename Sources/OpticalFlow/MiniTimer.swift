@@ -51,7 +51,7 @@ struct MiniTimerView: View {
         VStack(alignment: .leading, spacing: Space.sm) {
             HStack(spacing: Space.xs) {
                 if let project = model.session?.task?.project ?? model.upNext?.project {
-                    Image(systemName: "circle.fill").font(.caption2).foregroundStyle(project.color)
+                    ProjectIcon(project: project, size: 12)
                 }
                 Text(title)
                     .font(.caption)

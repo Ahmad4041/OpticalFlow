@@ -78,6 +78,20 @@ enum Snapshot {
                 }
                 model.stopSession()
             }
+            if only == nil || only?.contains("projectedit") == true, let project = model.projects.first {
+                model.sidebar = .project(project.uuid)
+                model.showsBoard = false
+                model.projectPrompt = .edit(project)
+                try? await Task.sleep(for: .seconds(1))
+                let main = NSApp.windows.first { $0.canBecomeMain && !$0.isSheet }
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.6))
+                    capture(to: "\(dir)/projectedit-\(mode).png", window: main?.attachedSheet)
+                }
+                model.projectPrompt = nil
+                try? await Task.sleep(for: .seconds(0.6))
+            }
             if only == nil || only?.contains("quickentry") == true {
                 model.quickEntry.show()
                 try? await Task.sleep(for: .seconds(0.8))

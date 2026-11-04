@@ -161,11 +161,37 @@ enum AgentCommands {
             guard case .project(let id)? = model.sidebar, let project = model.project(id) else { throw AgentError.invalid("--name cannot be empty") }
             return project.agentJSON
         },
-        AgentCommand(name: "projects update", summary: "Change a project: its repository folder for agent hand-offs.",
+        AgentCommand(name: "projects update", summary: "Change a project: name, color, icon, image, or its repository folder for agent hand-offs.",
                      params: [.init(name: "id", required: true, positional: true, help: "a project id or name"),
+                              .init(name: "name", help: "a new name"),
+                              .init(name: "color", help: ProjectColor.allCases.map(\.rawValue).joined(separator: ", ")),
+                              .init(name: "symbol", help: "an SF Symbol name, like hammer.fill"),
+                              .init(name: "image", help: "path of a logo or picture, or \"none\""),
                               .init(name: "repo", help: "path of the git repository, or \"none\"")],
-                     example: "opticalflow projects update OpticalFlow --repo ~/code/opticalflow --json") { args, model in
+                     example: "opticalflow projects update OpticalFlow --color teal --symbol hammer.fill --repo ~/code/opticalflow --json") { args, model in
             let project = try findProject(try args.required("id"), in: model)
+            var draft = model.draft(for: .edit(project))
+            if let name = args.string("name") { draft.name = name }
+            if let color = args.string("color") {
+                guard let value = ProjectColor(rawValue: color.lowercased()) else {
+                    throw AgentError.invalid("--color is one of \(ProjectColor.allCases.map(\.rawValue).joined(separator: ", "))")
+                }
+                draft.color = value
+            }
+            if let symbol = args.string("symbol") {
+                guard NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil else { throw AgentError.invalid("\(symbol) is not an SF Symbol") }
+                draft.symbol = symbol
+                draft.imageData = nil
+            }
+            if let image = args.string("image") {
+                if image == "none" { draft.imageData = nil } else {
+                    let path = (image as NSString).expandingTildeInPath
+                    guard let data = ProjectImage.thumbnail(of: URL(fileURLWithPath: path)) else { throw AgentError.invalid("\(path) is not an image") }
+                    draft.imageData = data
+                }
+            }
+            model.projectPrompt = .edit(project)
+            model.commitProjectPrompt(draft)
             if let repo = args.string("repo") {
                 let path = (repo as NSString).expandingTildeInPath
                 if repo != "none", !Worktree.isRepository(path) { throw AgentError.invalid("\(path) is not a git repository") }
@@ -446,7 +472,7 @@ extension TaskItem: AgentIdentified {
 extension Project: AgentIdentified {
     nonisolated var agentID: String { uuid.uuidString.lowercased().replacingOccurrences(of: "-", with: "") }
     nonisolated var agentJSON: JSONObject {
-        var json: JSONObject = ["id": String(agentID.prefix(8)), "name": name, "color": colorName, "open": openCount]
+        var json: JSONObject = ["id": String(agentID.prefix(8)), "name": name, "color": colorName, "symbol": symbol, "image": imageData != nil, "open": openCount]
         if let repoPath { json["repo"] = repoPath }
         return json
     }

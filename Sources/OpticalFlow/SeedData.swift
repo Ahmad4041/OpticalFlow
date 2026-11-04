@@ -18,6 +18,8 @@ enum SeedData {
 
         let app = Project(name: "OpticalFlow", color: .blue)
         let stream = Project(name: "Stream setup", color: .purple)
+        app.symbol = "hammer.fill"
+        stream.symbol = "video.fill"
         context.insert(app)
         context.insert(stream)
 

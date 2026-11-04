@@ -78,6 +78,36 @@ enum SelfTest {
             return check("S-004 New Project creates and selects a project", false)
         }
         check("S-004 New Project creates and selects a project", project.name == "Test project")
+
+        // S-052: the editor opens with the project's values and saves name, color, icon, and image together.
+        model.projectPrompt = .edit(project)
+        var projectDraft = model.draft(for: .edit(project))
+        check("S-052 Edit opens with the current name", projectDraft.name == "Test project" && projectDraft.symbol == ProjectSymbol.default)
+        projectDraft.name = "Renamed project"
+        projectDraft.color = .teal
+        projectDraft.symbol = "hammer.fill"
+        model.commitProjectPrompt(projectDraft)
+        check("S-052 Save renames, recolors, and sets the icon",
+              project.name == "Renamed project" && project.colorName == "teal" && project.symbol == "hammer.fill" && model.projectPrompt == nil)
+        let logo = Recorder.directory.appending(path: "selftest-logo.png")
+        let wide = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 400, pixelsHigh: 200, bitsPerSample: 8, samplesPerPixel: 4,
+                                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        try? FileManager.default.createDirectory(at: Recorder.directory, withIntermediateDirectories: true)
+        try? wide?.representation(using: .png, properties: [:])?.write(to: logo)
+        let thumb = ProjectImage.thumbnail(of: logo).flatMap { NSBitmapImageRep(data: $0) }
+        check("S-052 a picture becomes a 128 px square", thumb?.pixelsWide == 128 && thumb?.pixelsHigh == 128, "\(String(describing: thumb?.size))")
+        check("S-052 a file that is not an image is refused", ProjectImage.thumbnail(of: Store.url) == nil)
+        model.projectPrompt = .edit(project)
+        projectDraft.imageData = ProjectImage.thumbnail(of: logo)
+        model.commitProjectPrompt(projectDraft)
+        check("S-052 the image is kept with the project", project.imageData != nil)
+        model.projectPrompt = .edit(project)
+        model.commitProjectPrompt(name: "   ")
+        check("S-052 an empty name changes nothing", project.name == "Renamed project" && project.imageData != nil)
+        check("S-052 an old color name still resolves", ProjectColor(rawValue: "purple") != nil && ProjectColor(rawValue: "blue") != nil)
+        check("S-052 every offered icon is a real SF Symbol", ProjectSymbol.all.allSatisfy { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil })
+        model.sidebar = .project(project.uuid)
+        check("S-052 Edit Project acts on the page shown", model.currentProject == project)
         task.project = project
         check("S-004 picking a project removes the task from Inbox", !model.tasks(for: .list(.inbox)).contains(task))
         check("S-004 the project page lists it", model.tasks(for: .project(projectID)).contains(task))

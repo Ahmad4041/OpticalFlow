@@ -11,6 +11,10 @@ final class Project {
     var uuid: UUID = UUID()
     /// The git repository an agent works in when a task is handed over. Optional: set per project.
     var repoPath: String?
+    /// An SF Symbol name. Default keeps the colored dot older databases had.
+    var symbol: String = "circle.fill"
+    /// A 128 px PNG logo that replaces the symbol. Optional so older databases keep loading.
+    @Attribute(.externalStorage) var imageData: Data?
     @Relationship(deleteRule: .nullify, inverse: \TaskItem.project) var tasks: [TaskItem] = []
 
     init(name: String, color: ProjectColor = .blue) {
@@ -23,17 +27,23 @@ final class Project {
 }
 
 nonisolated enum ProjectColor: String, CaseIterable, Identifiable {
-    case red, orange, yellow, green, blue, purple, pink
+    case red, orange, yellow, green, mint, teal, blue, indigo, purple, pink, brown, gray
     var id: String { rawValue }
+    var title: String { rawValue.capitalized }
     var color: Color {
         switch self {
         case .red: .red
         case .orange: .orange
         case .yellow: .yellow
         case .green: .green
+        case .mint: .mint
+        case .teal: .teal
         case .blue: .blue
+        case .indigo: .indigo
         case .purple: .purple
         case .pink: .pink
+        case .brown: .brown
+        case .gray: .gray
         }
     }
 }
@@ -213,5 +223,16 @@ enum Page: Hashable {
 }
 
 enum ProjectPrompt: Equatable {
-    case new, rename(Project)
+    case new, edit(Project)
+}
+
+/// The sheet's item: one per prompt, so switching from one project to another opens a fresh sheet.
+struct ProjectPromptItem: Identifiable {
+    let prompt: ProjectPrompt
+    var id: String {
+        switch prompt {
+        case .new: "new"
+        case .edit(let project): project.uuid.uuidString
+        }
+    }
 }
