@@ -397,6 +397,43 @@ enum SelfTest {
         check("S-035 a task with Record Sessions opens the recorder", model.recorder.pickRequests == picks + 1)
         model.stopSession()
         task.recordsSession = false
+
+        // S-055: Start from the app asks; the answer sets the length and whether the picker opens.
+        model.requestSession(on: task)
+        check("S-055 Start from the app opens the prompt", model.startPrompt.isShown && model.startPrompt.task == task && model.session == nil)
+        model.startPrompt.close()
+        model.startSession(on: task, minutes: 40, record: false)
+        check("S-055 Start Timer starts the confirmed length and records nothing",
+              model.session?.plannedMinutes == 40 && model.recorder.pickRequests == picks + 1)
+        model.stopSession()
+        model.startSession(on: task, minutes: 25, record: true)
+        check("S-055 Record and Start opens the recording picker", model.recorder.pickRequests == picks + 2)
+        model.stopSession()
+        StartPrompt.asks = false
+        model.requestSession(on: task)
+        check("S-055 with asking off, Start begins at once", model.session != nil && !model.startPrompt.isShown)
+        model.stopSession()
+        StartPrompt.asks = true
+        model.selection = task.id
+        model.toggleSession()
+        check("S-055 the global hotkey never asks", model.session != nil && !model.startPrompt.isShown)
+        model.stopSession()
+
+        // S-056: checking the last subtask completes the task; a half-done list does not.
+        guard let list = model.addTask(title: "Checklist target", on: .list(.inbox)) else { return check("S-056 add", false) }
+        list.subtasks = [ChecklistItem(title: "One"), ChecklistItem(title: "Two")]
+        model.setSubtask(list.subtasks[0].id, of: list, done: true)
+        check("S-056 one of two checked keeps the task open", !list.isDone)
+        model.setSubtask(list.subtasks[1].id, of: list, done: true)
+        check("S-056 the last subtask checked completes the task", list.isDone)
+        guard let monthly = model.addTask(title: "Pay rent every month", on: .list(.inbox)) else { return check("S-056 add repeat", false) }
+        monthly.subtasks = [ChecklistItem(title: "Transfer")]
+        let dueBefore = monthly.due
+        model.setSubtask(monthly.subtasks[0].id, of: monthly, done: true)
+        check("S-056 a repeating task moves on and clears its checklist",
+              !monthly.isDone && monthly.due != dueBefore && monthly.subtasks.allSatisfy { !$0.isDone }, "\(String(describing: monthly.due)) \(monthly.repeatRule)")
+        model.delete(list)
+        model.delete(monthly)
         model.complete(task)
         check("S-034 completing clears doing", !task.isDoing)
         model.undoComplete()

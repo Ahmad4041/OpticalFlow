@@ -282,3 +282,9 @@ func voiceIntents(_ text: String, expected: VoiceIntent) {
     #expect(Release.digest(inChecksumFile: "\(hex.uppercased())  OpticalFlow-0.2.0.zip\n") == hex)
     #expect(Release.digest(inChecksumFile: "not a sum") == nil)
 }
+
+@Test func checklistComplete() {
+    #expect(!Checklist.isComplete([]))
+    #expect(!Checklist.isComplete([ChecklistItem(title: "a", isDone: true), ChecklistItem(title: "b")]))
+    #expect(Checklist.isComplete([ChecklistItem(title: "a", isDone: true), ChecklistItem(title: "b", isDone: true)]))
+}

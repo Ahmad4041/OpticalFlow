@@ -64,11 +64,14 @@ struct GeneralSettings: View {
     @Environment(AppModel.self) private var model
     @AppStorage("plannedMinutes", store: Prefs.store) private var plannedMinutes = 25
     @AppStorage(ControlStrip.enabledKey, store: Prefs.store) private var controlStrip = true
+    @AppStorage(StartPrompt.askKey, store: Prefs.store) private var askBeforeSession = true
 
     var body: some View {
         @Bindable var recorder = model.recorder
         Section("Sessions") {
             Stepper("Length: \(plannedMinutes) minutes", value: $plannedMinutes, in: 5...180, step: 5)
+            Toggle("Ask before each session", isOn: $askBeforeSession)
+                .help("Start from the app shows the length to confirm and Start Timer or Record and Start. The global hotkey, URL commands, and the CLI start right away.")
             Toggle("Timer in the Touch Bar Control Strip", isOn: $controlStrip)
                 .onChange(of: controlStrip) {
                     if controlStrip { ControlStrip.shared.install(model: model) } else { ControlStrip.shared.remove() }

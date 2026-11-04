@@ -40,7 +40,7 @@ struct TaskList: View {
             .draggable(task.uuid.uuidString)
             .contextMenu {
                 Button("Complete") { model.complete(task) }
-                Button("Start Session") { model.startSession(on: task) }
+                Button("Start Session") { model.requestSession(on: task) }
                 Toggle("Record Sessions", isOn: Binding(get: { task.recordsSession }, set: { task.recordsSession = $0; model.save() }))
                 PriorityMenu(task: task)
                 HandoffButton(task: task)
@@ -232,7 +232,7 @@ struct TaskDetail: View {
             Section {
                 ForEach($task.subtasks) { $item in
                     HStack(spacing: Space.sm) {
-                        Toggle("Done", isOn: $item.isDone)
+                        Toggle("Done", isOn: Binding(get: { item.isDone }, set: { model.setSubtask(item.id, of: task, done: $0) }))
                             .labelsHidden()
                             .toggleStyle(.checkbox)
                         TextField("Subtask", text: $item.title, prompt: Text("Subtask"))
@@ -306,7 +306,7 @@ struct TaskDetail: View {
                     .frame(minHeight: 120)
             }
             Section {
-                Button("Start Session", systemImage: "play.fill") { model.startSession(on: task) }
+                Button("Start Session", systemImage: "play.fill") { model.requestSession(on: task) }
                     .disabled(model.session?.task == task)
                 HandoffButton(task: task)
             }

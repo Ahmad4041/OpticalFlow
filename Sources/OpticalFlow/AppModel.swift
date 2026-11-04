@@ -27,6 +27,7 @@ final class AppModel {
     /// Done tasks completed after this still show, dimmed, for two seconds.
     var hideDoneBefore = Date.now
     var projectPrompt: ProjectPrompt?
+    @ObservationIgnored lazy var startPrompt = StartPrompt(model: self)
     let updater = Updater()
     private var undoCompleted: [TaskItem] = []
 
@@ -227,6 +228,15 @@ final class AppModel {
             try? await Task.sleep(for: .seconds(2))
             self?.hideDoneBefore = .now
         }
+    }
+
+    /// Checks or unchecks one subtask. Checking the last open one completes the task
+    /// (a repeating task moves to its next day with its subtasks cleared).
+    func setSubtask(_ id: ChecklistItem.ID, of task: TaskItem, done: Bool) {
+        guard let index = task.subtasks.firstIndex(where: { $0.id == id }) else { return }
+        task.subtasks[index].isDone = done
+        save()
+        if done, Checklist.isComplete(task.subtasks) { complete(task) }
     }
 
     func completeSelected() {
@@ -560,14 +570,22 @@ final class AppModel {
         }
     }
 
-    func startSession(on task: TaskItem? = nil) {
+    /// A Start from the app: asks for the length and whether to record, unless turned off in Settings.
+    /// The hotkey, URL commands, the CLI, and voice call startSession directly and never ask.
+    func requestSession(on task: TaskItem? = nil) {
+        guard let task = task ?? selectedTask else { return }
+        if StartPrompt.asks { startPrompt.show(for: task) } else { startSession(on: task) }
+    }
+
+    /// `minutes` nil: the Settings length. `record` nil: the task's "record sessions" setting.
+    func startSession(on task: TaskItem? = nil, minutes: Int? = nil, record: Bool? = nil) {
         guard let task = task ?? selectedTask else { return }
         if session != nil { stopSession() }
-        let new = Session(task: task, plannedMinutes: plannedMinutes)
+        let new = Session(task: task, plannedMinutes: minutes ?? plannedMinutes)
         context.insert(new)
         save()
         task.isDoing = true
-        if task.recordsSession, !recorder.isRecording { recorder.pick() }
+        if record ?? task.recordsSession, !recorder.isRecording { recorder.pick() }
         session = new
         clock = SessionClock(planned: new.plannedMinutes * 60, startedAt: .now)
         notifiedDone = false
@@ -640,6 +658,11 @@ final class AppModel {
     /// The hotkey: start on the selected task, or stop.
     func toggleSession() {
         if session == nil { startSession() } else { stopSession() }
+    }
+
+    /// The menu's Start Session: asks first. The global hotkey keeps toggleSession, which never asks.
+    func toggleSessionFromMenu() {
+        if session == nil { requestSession() } else { stopSession() }
     }
 
     func toggleRecording() {

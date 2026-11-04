@@ -83,7 +83,7 @@ struct ContentView: View {
                 Button("Stop", systemImage: "stop.fill") { model.stopSession() }
                     .help("Stop the session (Command-Return)")
             } else {
-                Button("Start Session", systemImage: "play.fill") { model.startSession() }
+                Button("Start Session", systemImage: "play.fill") { model.requestSession() }
                     .disabled(model.selectedTask == nil)
                     .help("Start a session on the selected task (Command-Return)")
             }
@@ -248,7 +248,7 @@ struct TouchBarStrip: View {
             Button("End Break", systemImage: "xmark") { model.endBreak() }
         } else {
             if let next = model.upNext {
-                Button("Start: \(next.title)", systemImage: "play.fill") { model.startSession(on: next) }
+                Button("Start: \(next.title)", systemImage: "play.fill") { model.requestSession(on: next) }
                     .touchBarItemPrincipal()
             }
             if let task = model.selectedTask, !task.isDone {

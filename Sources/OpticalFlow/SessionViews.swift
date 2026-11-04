@@ -75,7 +75,7 @@ struct SessionList: View {
             .tag(session.id)
             .contextMenu {
                 if let task = session.task {
-                    Button("Start Another Session on \(task.title)") { model.startSession(on: task) }
+                    Button("Start Another Session on \(task.title)") { model.requestSession(on: task) }
                     Button("Show Task") { model.sidebar = .list(.inbox); model.showTask(task) }
                 }
                 Divider()
@@ -140,7 +140,7 @@ struct SessionDetail: View {
                         Button(model.paused ? "Resume" : "Pause", systemImage: model.paused ? "play.fill" : "pause.fill") { model.paused ? model.resume() : model.pause() }
                         Button("Stop", systemImage: "stop.fill") { model.stopSession() }
                     } else if let task = session.task {
-                        Button("Start Another Session", systemImage: "play.fill") { model.startSession(on: task) }
+                        Button("Start Another Session", systemImage: "play.fill") { model.requestSession(on: task) }
                             .disabled(model.session != nil)
                     }
                 }

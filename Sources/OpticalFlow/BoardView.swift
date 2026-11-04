@@ -216,7 +216,7 @@ struct BoardCard: View {
         }
         .contextMenu {
             Button("Complete") { model.complete(task) }.disabled(task.isDone)
-            Button("Start Session") { model.startSession(on: task) }
+            Button("Start Session") { model.requestSession(on: task) }
             Button(task.recordsSession ? "Stop Recording Sessions" : "Record Sessions") { task.recordsSession.toggle(); model.save() }
             PriorityMenu(task: task)
             HandoffButton(task: task)

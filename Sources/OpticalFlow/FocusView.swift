@@ -158,7 +158,7 @@ struct FocusView: View {
             taskHeader(task)
             HStack(spacing: Space.md) {
                 Button("Start \(model.plannedMinutes) min Session", systemImage: "play.fill") {
-                    model.startSession(on: task)
+                    model.requestSession(on: task)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)

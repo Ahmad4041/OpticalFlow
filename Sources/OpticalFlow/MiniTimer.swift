@@ -99,7 +99,7 @@ struct MiniTimerView: View {
                     } else if model.breakUntil != nil {
                         Button("End Break", systemImage: "xmark") { model.endBreak() }
                     } else {
-                        Button("Start", systemImage: "play.fill") { model.startSession(on: model.upNext) }
+                        Button("Start", systemImage: "play.fill") { model.requestSession(on: model.upNext) }
                             .buttonStyle(.borderedProminent)
                             .disabled(model.upNext == nil)
                             .help(model.upNext.map { "Start a session on “\($0.title)”" } ?? "Add a task first")

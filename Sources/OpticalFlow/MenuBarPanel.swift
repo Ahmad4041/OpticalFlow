@@ -44,7 +44,7 @@ struct MenuBarPanel: View {
                     .font(.headline)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                Button("Start Session", systemImage: "play.fill") { model.startSession() }
+                Button("Start Session", systemImage: "play.fill") { model.requestSession() }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.selectedTask == nil)
                 HStack(spacing: Space.sm) {

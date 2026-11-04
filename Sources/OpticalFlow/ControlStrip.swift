@@ -167,7 +167,7 @@ final class ControlStrip: NSObject, NSTouchBarDelegate {
     @objc private func stop() { model?.stopSession(); tapped() }
     @objc private func done() { if let task = model?.session?.task { model?.complete(task) }; model?.stopSession(); tapped() }
     @objc private func endBreak() { model?.endBreak(); tapped() }
-    @objc private func start() { model?.startSession(on: model?.upNext); tapped() }
+    @objc private func start() { model?.requestSession(on: model?.upNext); tapped() }
     @objc private func record() { model?.toggleRecording(); dismiss() }
     @objc private func voice() { model?.voice.toggle(); dismiss() }
 }

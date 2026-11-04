@@ -413,7 +413,7 @@ enum AgentCommands {
         for (key, done) in [("check", true), ("uncheck", false)] {
             guard let text = args.string(key) else { continue }
             guard let index = Checklist.index(of: text, in: task.subtasks) else { throw AgentError.invalid("no subtask matches \"\(text)\"") }
-            task.subtasks[index].isDone = done
+            model.setSubtask(task.subtasks[index].id, of: task, done: done)
         }
         if let text = args.string("priority") {
             guard let priority = Priority.parse(text) else { throw AgentError.usage("--priority takes none, low, medium, or high") }

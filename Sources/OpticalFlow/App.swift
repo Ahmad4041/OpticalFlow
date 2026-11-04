@@ -80,7 +80,7 @@ struct OpticalFlowApp: App {
                     .keyboardShortcut("t", modifiers: [.command, .shift])
                     .disabled(model.selectedTask == nil)
                 Divider()
-                Button(model.session == nil ? "Start Session" : "Stop Session") { model.toggleSession() }
+                Button(model.session == nil ? "Start Session…" : "Stop Session") { model.toggleSessionFromMenu() }
                     .keyboardShortcut(.return)
                     .disabled(model.session == nil && model.selectedTask == nil)
                 Button(model.paused ? "Resume Session" : "Pause Session") {

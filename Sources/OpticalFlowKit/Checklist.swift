@@ -19,6 +19,11 @@ public enum Checklist {
         (items.filter(\.isDone).count, items.count)
     }
 
+    /// True when there is at least one item and every item is done.
+    public static func isComplete(_ items: [ChecklistItem]) -> Bool {
+        !items.isEmpty && items.allSatisfy(\.isDone)
+    }
+
     /// "a; b; c" or one per line, blanks dropped.
     public static func parse(_ text: String) -> [ChecklistItem] {
         text.split(whereSeparator: { $0 == ";" || $0.isNewline })

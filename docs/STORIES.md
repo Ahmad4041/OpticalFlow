@@ -476,6 +476,25 @@ Acceptance:
 UX: `tools/release.sh` builds the zip, its checksum, and the DMG from the staged app, signed ad hoc.
 Status: done
 
+### S-055 Ask before a session: the length, and whether to record
+As the user, Start in the app asks once: I confirm the minutes, then Start Timer, or Record and Start, which lets me pick a display or a window.
+Screens: startprompt, settings-general
+Depends: S-005, S-035
+Acceptance:
+- [self] Start from the app opens the prompt; Start Timer starts the confirmed length without the picker; Record and Start opens it; with asking off Start begins at once; the global hotkey never asks.
+UX: a floating panel, so it works from the window, the menu bar, the mini timer, and the Touch Bar. Return presses Start Timer, or Record and Start when the task records its sessions. "Don't ask again", and Settings > Sessions > Ask before each session. The hotkey, URL commands, the CLI, and voice start right away, so scripts never block.
+Status: done
+
+### S-056 The last subtask completes the task
+As the user, when I check the last open subtask, the task is done; a repeating task moves to its next day with its checklist cleared.
+Screens: today, board
+Depends: S-043, S-049
+Acceptance:
+- [unit] isComplete: empty is never complete; all checked is.
+- [self] one of two checked keeps the task open; the second completes it; a repeating task moves on.
+UX: the detail's checkboxes and `tasks update --check` share one model function. Command-Z brings the task back.
+Status: done
+
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
 As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.

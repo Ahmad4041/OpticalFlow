@@ -92,6 +92,15 @@ enum Snapshot {
                 model.projectPrompt = nil
                 try? await Task.sleep(for: .seconds(0.6))
             }
+            if only == nil || only?.contains("startprompt") == true, let task = model.upNext {
+                model.startPrompt.show(for: task)
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.6))
+                    capture(to: "\(dir)/startprompt-\(mode).png", window: model.startPrompt.window)
+                }
+                model.startPrompt.close()
+            }
             if only == nil || only?.contains("quickentry") == true {
                 model.quickEntry.show()
                 try? await Task.sleep(for: .seconds(0.8))
