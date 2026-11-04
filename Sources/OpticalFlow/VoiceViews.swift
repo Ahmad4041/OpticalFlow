@@ -35,9 +35,18 @@ struct VoiceView: View {
         HStack(alignment: .top, spacing: Space.md) {
             VoiceAvatar(listening: voice.listening, busy: voice.busy, done: !voice.reply.isEmpty, failed: voice.error != nil)
             VStack(alignment: .leading, spacing: Space.sm) {
-                Text(headline(voice))
-                    .font(.headline)
-                    .contentTransition(.opacity)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(headline(voice))
+                        .font(.headline)
+                        .contentTransition(.opacity)
+                    Spacer()
+                    Button("Close", systemImage: "xmark.circle.fill") { voice.close() }
+                        .buttonStyle(.borderless)
+                        .labelStyle(.iconOnly)
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .help(voice.busy ? "Close (Escape). The job keeps running under the toolbar sparkles." : "Close (Escape)")
+                }
                 TextField("Say or type what to do", text: $voice.transcript, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.title3)
@@ -102,7 +111,7 @@ struct VoiceView: View {
 
     private func footer(_ voice: VoiceAgent) -> String {
         if voice.listening { return "Pause to send, or press Return. Escape cancels." }
-        if voice.busy { return "\(voice.orchestrator.title) is working. Escape closes this; the result lands on the task and under the toolbar sparkles." }
+        if voice.busy { return "\(voice.orchestrator.title) is working. Close or click away; the result lands on the task and under the toolbar sparkles." }
         return "Clear commands run at once. Longer requests go to \(voice.orchestrator.title). Settings > Agent."
     }
 }

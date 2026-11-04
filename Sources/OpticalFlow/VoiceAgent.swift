@@ -587,6 +587,12 @@ final class VoiceAgent {
         panel.standardWindowButton(.zoomButton)?.isHidden = true
         panel.setFrameAutosaveName("VoicePanel")
         panel.contentView = NSHostingView(rootView: VoiceView().environment(model).themed())
+        // Clicking any other window closes the panel, like a popover. Snapshot runs move focus around, so they keep it.
+        if ProcessInfo.processInfo.environment["APP_SNAPSHOT"] == nil {
+            NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: panel, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.close() }
+            }
+        }
         return panel
     }
 

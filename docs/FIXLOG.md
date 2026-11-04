@@ -117,3 +117,9 @@ Symptom: Rename… on a project showed an alert whose field was empty, so a rena
 Cause: the alert's text field was bound to a state that `onChange(of: projectPrompt)` filled in, but SwiftUI builds an alert's contents when it is presented, before that change ran.
 Fix: a sheet whose editor copies the project into a draft in its own `onAppear`, and writes the draft back on Save.
 Rule: a form that edits an existing value loads that value inside the view that shows it, never from a change handler on the presenting view.
+
+## 2026-11-04 The voice panel had no way to dismiss it after an answer
+Symptom: when a job finished, the panel stayed on screen; only Escape closed it, and nothing said so once the text field lost focus.
+Cause: the panel hid the standard close button and set no close-on-deactivate, so it behaved like a window with no chrome.
+Fix: a close button beside the headline, and the panel closes when any other window becomes key. A running job keeps going under the toolbar sparkles.
+Rule: a floating panel without a title bar gets its own close button and closes when focus moves away.
