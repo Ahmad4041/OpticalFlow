@@ -93,7 +93,7 @@ In OpticalFlow the bar has the session controls. In any other app a Control Stri
 xattr -d com.apple.quarantine /Applications/OpticalFlow.app
 ```
 
-**Updates:** from 0.2.0 on, OpticalFlow checks the latest release once a day and offers Install and Relaunch. Check by hand with OpticalFlow > Check for Updates (Option-Command-U), or turn the daily check off in Settings > Sessions > Updates. The app downloads the release zip, checks it against the release's SHA-256 file, confirms the app inside is OpticalFlow at that version with a valid signature, then swaps itself and reopens. It sends nothing about you; it only reads the public release. Coming from 0.1.x, download 0.2.0 once by hand.
+**Updates:** from 0.2.0 on, OpticalFlow checks the latest release once a day and offers Install and Relaunch. Check by hand with OpticalFlow > Check for Updates (Option-Command-U), or turn the daily check off in Settings > Updates. The app downloads the release zip, checks it against the release's SHA-256 file, confirms the app inside is OpticalFlow at that version with a valid signature, then swaps itself and reopens. It sends nothing about you; it only reads the public release. Coming from 0.1.x, download 0.2.0 once by hand.
 
 **Build it yourself:**
 

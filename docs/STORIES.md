@@ -464,7 +464,7 @@ Depends: none
 Acceptance:
 - [unit] versions compare by number ("0.10.0" > "0.9.9", "0.2" == "0.2.0"); a release without a .zip and .zip.sha256, or a prerelease, is not offered.
 - [self] a download whose checksum differs is refused; an app whose version differs from the release is refused; a matching download unpacks and verifies; a test run never replaces the app or checks on its own.
-UX: OpticalFlow > Check for Updates (Option-Command-U). A standard alert: "OpticalFlow 0.2.0 is available", the notes, Install and Relaunch, Later, Skip This Version. Settings > Sessions > Updates: daily check switch, version and status, Check Now or Install. The swap waits for the app to quit, puts the old bundle back if the move fails, and refuses to run from a translocated or read-only place. No framework: GitHub's release JSON, CryptoKit, ditto, codesign.
+UX: OpticalFlow > Check for Updates (Option-Command-U). A standard alert: "OpticalFlow 0.2.0 is available", the notes, Install and Relaunch, Later, Skip This Version. Settings > Updates: daily check switch, version and status, Check Now or Install. The swap waits for the app to quit, puts the old bundle back if the move fails, and refuses to run from a translocated or read-only place. No framework: GitHub's release JSON, CryptoKit, ditto, codesign.
 Status: done
 
 ### S-054 A drag-and-drop installer window

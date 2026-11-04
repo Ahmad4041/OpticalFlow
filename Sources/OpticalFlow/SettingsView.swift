@@ -26,6 +26,7 @@ struct SettingsView: View {
             case .general: GeneralSettings()
             case .agent: AgentSettings()
             case .appearance: AppearanceSettings()
+            case .updates: UpdateSettings()
             }
         }
         .formStyle(.grouped)
@@ -36,7 +37,7 @@ struct SettingsView: View {
 
 /// The Settings tabs. Snapshot mode walks through every case.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, agent, appearance
+    case general, agent, appearance, updates
 
     var id: String { rawValue }
 
@@ -45,6 +46,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "Sessions"
         case .agent: "Agent"
         case .appearance: "Appearance"
+        case .updates: "Updates"
         }
     }
 
@@ -53,6 +55,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "timer"
         case .agent: "mic.fill"
         case .appearance: "paintpalette"
+        case .updates: "arrow.down.circle"
         }
     }
 }
@@ -94,7 +97,6 @@ struct GeneralSettings: View {
         Section("Camera") {
             CameraLayoutControls(layout: $recorder.cameraLayout)
         }
-        UpdateSettings()
     }
 }
 
