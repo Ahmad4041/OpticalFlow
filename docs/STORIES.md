@@ -457,6 +457,25 @@ Acceptance:
 UX: a sheet replaces the rename alert (whose field opened empty). Name with a live icon preview, color swatches, a 7-column icon grid, an Image section that takes a file or a drop and replaces the icon, the repository for hand-offs, Delete. File > Edit Project (Shift-Command-E). `opticalflow projects update --name --color --symbol --image`.
 Status: done
 
+### S-053 Update in place from GitHub Releases
+As the user, OpticalFlow tells me when a new version is out and installs it with one click, and Check for Updates answers when I ask.
+Screens: settings-general
+Depends: none
+Acceptance:
+- [unit] versions compare by number ("0.10.0" > "0.9.9", "0.2" == "0.2.0"); a release without a .zip and .zip.sha256, or a prerelease, is not offered.
+- [self] a download whose checksum differs is refused; an app whose version differs from the release is refused; a matching download unpacks and verifies; a test run never replaces the app or checks on its own.
+UX: OpticalFlow > Check for Updates (Option-Command-U). A standard alert: "OpticalFlow 0.2.0 is available", the notes, Install and Relaunch, Later, Skip This Version. Settings > Sessions > Updates: daily check switch, version and status, Check Now or Install. The swap waits for the app to quit, puts the old bundle back if the move fails, and refuses to run from a translocated or read-only place. No framework: GitHub's release JSON, CryptoKit, ditto, codesign.
+Status: done
+
+### S-054 A drag-and-drop installer window
+As the user, opening the DMG shows the app, an arrow, and Applications, with one line saying what to do and how the first launch works.
+Screens: none (Finder)
+Depends: none
+Acceptance:
+- [manual] the mounted DMG opens a 640 by 400 window, icons at 128 pt, no toolbar, the background with the arrow.
+UX: `tools/release.sh` builds the zip, its checksum, and the DMG from the staged app, signed ad hoc.
+Status: done
+
 ## M5 System
 ### S-020 Shortcuts and Apple Focus control
 As the user, I start, stop, pause, or resume a session, start a break, toggle recording, or add a task from Shortcuts or a Focus automation with an Open URL action.

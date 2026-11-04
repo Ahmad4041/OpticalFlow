@@ -27,6 +27,7 @@ final class AppModel {
     /// Done tasks completed after this still show, dimmed, for two seconds.
     var hideDoneBefore = Date.now
     var projectPrompt: ProjectPrompt?
+    let updater = Updater()
     private var undoCompleted: [TaskItem] = []
 
     /// Settings reopens on the last tab. Test and snapshot runs leave it alone.

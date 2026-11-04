@@ -252,3 +252,33 @@ func voiceIntents(_ text: String, expected: VoiceIntent) {
     #expect(ExportOptions(camera: true, followCursor: true, youtube: true, removeSilence: true).suffix == " with camera zoomed youtube no silence")
     #expect(ExportOptions(youtube: true).suffix == " youtube")
 }
+
+@Test func versions() {
+    #expect(AppVersion("v0.2.0")! > AppVersion("0.1.1")!)
+    #expect(AppVersion("0.10.0")! > AppVersion("0.9.9")!)
+    #expect(AppVersion("0.2")! == AppVersion("0.2.0")!)
+    #expect(!(AppVersion("0.2.0")! > AppVersion("0.2")!))
+    #expect(AppVersion("beta") == nil && AppVersion("") == nil)
+    #expect(AppVersion("v1.2.3")!.description == "1.2.3")
+}
+
+@Test func releaseFeed() {
+    let json = """
+    {"tag_name":"v0.2.0","body":"New things.\\n\\n## Install\\nDrag it.","html_url":"https://github.com/o/r/releases/tag/v0.2.0",
+     "draft":false,"prerelease":false,"assets":[
+       {"name":"OpticalFlow-0.2.0.dmg","browser_download_url":"https://x/OpticalFlow-0.2.0.dmg"},
+       {"name":"OpticalFlow-0.2.0.zip","browser_download_url":"https://x/OpticalFlow-0.2.0.zip"},
+       {"name":"OpticalFlow-0.2.0.zip.sha256","browser_download_url":"https://x/OpticalFlow-0.2.0.zip.sha256"}]}
+    """
+    let release = Release.parse(github: Data(json.utf8))
+    #expect(release?.version == AppVersion("0.2.0"))
+    #expect(release?.notes == "New things.")
+    #expect(release?.zip.lastPathComponent == "OpticalFlow-0.2.0.zip")
+    #expect(release?.checksum.lastPathComponent == "OpticalFlow-0.2.0.zip.sha256")
+    // No checksum, no update; a prerelease is not offered.
+    #expect(Release.parse(github: Data(json.replacingOccurrences(of: ".zip.sha256\"", with: ".txt\"").utf8)) == nil)
+    #expect(Release.parse(github: Data(json.replacingOccurrences(of: "\"prerelease\":false", with: "\"prerelease\":true").utf8)) == nil)
+    let hex = String(repeating: "ab", count: 32)
+    #expect(Release.digest(inChecksumFile: "\(hex.uppercased())  OpticalFlow-0.2.0.zip\n") == hex)
+    #expect(Release.digest(inChecksumFile: "not a sum") == nil)
+}

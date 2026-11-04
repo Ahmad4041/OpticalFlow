@@ -94,6 +94,44 @@ struct GeneralSettings: View {
         Section("Camera") {
             CameraLayoutControls(layout: $recorder.cameraLayout)
         }
+        UpdateSettings()
+    }
+}
+
+/// Version, automatic checks, and the update when one is waiting.
+struct UpdateSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let updater = model.updater
+        Section("Updates") {
+            Toggle("Check for updates every day", isOn: Binding(get: { updater.checksAutomatically }, set: { updater.checksAutomatically = $0 }))
+                .help("Reads the latest release on GitHub. Nothing about you or your tasks is sent.")
+            LabeledContent("Version") {
+                HStack(spacing: Space.sm) {
+                    Text(status).foregroundStyle(.secondary)
+                    if case .available(let release) = updater.state {
+                        Button("Install \(release.version.description) and Relaunch") { Task { await updater.install(release) } }
+                            .buttonStyle(.borderedProminent)
+                    } else {
+                        Button("Check Now") { Task { await updater.check(userInitiated: true) } }
+                            .disabled(updater.state == .checking || updater.state == .installing)
+                    }
+                }
+            }
+        }
+    }
+
+    private var status: String {
+        let current = "\(model.updater.current)"
+        switch model.updater.state {
+        case .idle: return current
+        case .checking: return "\(current), checking…"
+        case .upToDate: return "\(current), the latest"
+        case .available(let release): return "\(current), \(release.version) is out"
+        case .installing: return "Installing…"
+        case .failed: return "\(current), check failed"
+        }
     }
 }
 

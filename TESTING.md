@@ -63,3 +63,7 @@ GitHub Actions builds the package and runs the unit tests on a macOS 26 runner. 
 - The self-test or snapshot run hangs with no output: a crashed run left saved window state. The scripts clear it; if it still hangs, `pkill -f staged/OpticalFlow.app` and retry.
 - The installed app quits silently while you build: a build replaced a running app's signed binary. `build.sh` now stages first and refuses to install over a running copy; use `./build.sh --open`.
 - Every bug that gets fixed gets a line in [docs/FIXLOG.md](docs/FIXLOG.md) ending in `Rule:`.
+
+## Releases
+
+`./build.sh && tools/release.sh` writes the zip, its `.sha256`, and the DMG to `~/Library/Developer/OpticalFlow/release/<version>/`. Upload all of them: the updater refuses a release without `<name>.zip.sha256`. The self-test covers the updater against a fake release in /tmp (checksum, version, signature, and the bundle swap on throwaway folders); it never replaces the app. Open the DMG once and look at the window before publishing.

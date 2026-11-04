@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import CryptoKit
 import SwiftData
 import OpticalFlowKit
 
@@ -325,6 +326,8 @@ enum SelfTest {
         model.voice.attach(job)
         check("S-047 the reply is written on the touched task", aiTask.agentReply == "Done, it is urgent now." && aiTask.agentReplyAt != nil)
         check("S-047 finished jobs clear", { model.voice.clearFinishedJobs(); return model.voice.jobs.isEmpty }())
+        // S-053: the updater reads a release, refuses a bad download, and accepts a good one without touching the app.
+        await updateChecks(model)
         // S-051: an agent run never inherits another tool's API routing.
         let agentEnv = Orchestrator.environment(from: ["ANTHROPIC_BASE_URL": "http://proxy", "OPENAI_BASE_URL": "http://proxy", "OPENAI_API_BASE": "x", "HOME": "/h", "PATH": "/usr/bin"])
         check("S-051 base URLs are dropped and PATH gains the tool folders",
@@ -509,6 +512,59 @@ enum SelfTest {
         } catch {
             check("S-009/S-012 export", false, "\(error)")
         }
+    }
+
+    /// A fake release in /tmp: this app zipped, its checksum, and a feed pointing at both.
+    private static func updateChecks(_ model: AppModel) async {
+        let dir = URL(fileURLWithPath: "/tmp/OpticalFlow-update-test")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let zip = dir.appending(path: "OpticalFlow.zip"), sum = dir.appending(path: "OpticalFlow.zip.sha256"), bad = dir.appending(path: "bad.sha256")
+        try? FileManager.default.removeItem(at: zip)
+        do { try Worktree.run("/usr/bin/ditto", ["-c", "-k", "--keepParent", Bundle.main.bundlePath, zip.path], in: dir.path) }
+        catch { return check("S-053 zip the app", false, "\(error)") }
+        let hex = SHA256.hash(data: (try? Data(contentsOf: zip)) ?? Data()).map { String(format: "%02x", $0) }.joined()
+        try? "\(hex)  OpticalFlow.zip\n".write(to: sum, atomically: true, encoding: .utf8)
+        try? "\(String(repeating: "0", count: 64))  OpticalFlow.zip\n".write(to: bad, atomically: true, encoding: .utf8)
+        let current = model.updater.current
+        let good = Release(version: current, notes: "", page: nil, zip: zip, checksum: sum)
+        check("S-053 a release of this version is not offered", !(good.version > current))
+        check("S-053 a higher version is offered", AppVersion("\(current.description).1")! > current)
+        do {
+            let app = try await model.updater.prepare(good)
+            check("S-053 a matching download unpacks and verifies", Bundle(url: app)?.bundleIdentifier == Bundle.main.bundleIdentifier)
+        } catch { check("S-053 a matching download unpacks and verifies", false, "\(error)") }
+        var tampered = good
+        tampered.checksum = bad
+        do { _ = try await model.updater.prepare(tampered); check("S-053 a wrong checksum is refused", false) }
+        catch { check("S-053 a wrong checksum is refused", "\(error.localizedDescription)".contains("checksum"), error.localizedDescription) }
+        var mislabeled = good
+        mislabeled.version = AppVersion("99.0.0")!
+        do { _ = try await model.updater.prepare(mislabeled); check("S-053 a version that does not match the release is refused", false) }
+        catch { check("S-053 a version that does not match the release is refused", error.localizedDescription.contains("99.0.0"), error.localizedDescription) }
+        await model.updater.install(Release(version: AppVersion("99.0.0")!, notes: "", page: nil, zip: zip, checksum: sum))
+        check("S-053 a test run never replaces the app", FileManager.default.fileExists(atPath: Bundle.main.bundlePath) && NSApp.isRunning)
+        check("S-053 no automatic checks in a test run", Store.isOverridden)
+
+        // The swap itself, on throwaway folders: the new copy takes the old one's place, and a failed move puts the old one back.
+        let swap = dir.appending(path: "swap"), installed = swap.appending(path: "Installed.app"), fresh = swap.appending(path: "New.app")
+        try? FileManager.default.removeItem(at: swap)
+        try? FileManager.default.createDirectory(at: installed, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: fresh, withIntermediateDirectories: true)
+        try? "old".write(to: installed.appending(path: "v"), atomically: true, encoding: .utf8)
+        try? "new".write(to: fresh.appending(path: "v"), atomically: true, encoding: .utf8)
+        func runSwap(_ newPath: String) -> Int32 {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/sh")
+            p.arguments = ["-c", Updater.swapScript, "updater", "999999", installed.path, newPath, "noopen"]
+            try? p.run(); p.waitUntilExit()
+            return p.terminationStatus
+        }
+        let swapped = runSwap(fresh.path)
+        check("S-053 the swap puts the new app in place and removes the old one",
+              swapped == 0 && (try? String(contentsOf: installed.appending(path: "v"), encoding: .utf8)) == "new"
+              && !FileManager.default.fileExists(atPath: installed.path + ".old"), "status \(swapped)")
+        let failed = runSwap(swap.appending(path: "Missing.app").path)
+        check("S-053 a failed swap keeps the installed app", failed != 0 && (try? String(contentsOf: installed.appending(path: "v"), encoding: .utf8)) == "new")
     }
 
     private static func check(_ name: String, _ ok: Bool, _ detail: String = "") {

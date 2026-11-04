@@ -31,6 +31,7 @@ struct OpticalFlowApp: App {
                     Hotkey.registerQuickEntry { model.quickEntry.toggle() }
                     Hotkey.registerVoice { model.voice.toggle() }
                     Hotkey.registerMark { model.mark() }
+                    model.updater.startAutomaticChecks()
                     if ControlStrip.enabled, !Store.isOverridden || ProcessInfo.processInfo.environment["APP_STRIP"] == "1" { ControlStrip.shared.install(model: model) }
                 }
         }
@@ -40,6 +41,11 @@ struct OpticalFlowApp: App {
         .defaultSize(width: 1180, height: 740)
         .windowToolbarStyle(.unified)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { Task { await model.updater.check(userInitiated: true) } }
+                    .keyboardShortcut("u", modifiers: [.command, .option])
+                    .disabled(model.updater.state == .checking || model.updater.state == .installing)
+            }
             SidebarCommands()
             ToolbarCommands()
             CommandGroup(replacing: .newItem) {
